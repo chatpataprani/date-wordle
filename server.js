@@ -14,15 +14,15 @@ app.use(express.json());
 
 // ---------- CONFIG: edit these before deploying ----------
 const PORT = process.env.PORT || 3000;
-const MAX_ATTEMPTS = 6;
+const MAX_ATTEMPTS = 5;
 const DB_FILE = path.join(__dirname, "games.json");
 
 // Multiple admins allowed. Anyone who knows one of these passcodes
 // can tap the corner lock on a play page and reveal that word.
 // Change these before you deploy anywhere real.
 const ADMIN_KEYS = [
-  process.env.ADMIN_KEY_1 || "jayaisgay",
-  process.env.ADMIN_KEY_2 || "gay",
+  process.env.ADMIN_KEY_1 || "change-me-1",
+  process.env.ADMIN_KEY_2 || "change-me-2",
 ];
 // -----------------------------------------------------------
 
@@ -154,7 +154,7 @@ app.post("/api/reveal/:id", (req, res) => {
 
 const BASE_CSS = `
   :root{--bg:#0e0e12;--panel:#17171d;--border:#2a2a33;--fg:#eee;--muted:#8a8a95;
-    --correct:#4caf6d;--present:#c9a227;--absent:#3a3a44;--accent:#ff5d8f;}
+    --correct:#4caf6d;--present:#c9a227;--absent:#c0392b;--accent:#ff5d8f;}
   *{box-sizing:border-box}
   body{background:var(--bg);color:var(--fg);font-family:'Courier New',monospace;
     margin:0;min-height:100vh;display:flex;flex-direction:column;align-items:center;
@@ -187,7 +187,7 @@ const BASE_CSS = `
   .key.wide{flex:1.6;font-size:.7rem}
   .key.correct{background:var(--correct)}
   .key.present{background:var(--present)}
-  .key.absent{background:var(--absent);opacity:.4}
+  .key.absent{background:var(--absent);color:#fff}
   .msg{text-align:center;margin-top:16px;font-size:.95rem;min-height:1.2em}
   a{color:var(--accent)}
   table{width:100%;border-collapse:collapse;font-size:.85rem}
@@ -245,21 +245,21 @@ function playPageHTML(id, len) {
 <title>DATE ME</title><style>${BASE_CSS}</style></head>
 <body>
   <h1>DATE ME</h1>
-  <div class="tag">// solve the word · ${len} letters · 6 tries</div>
+  <div class="tag">// solve the word · ${len} letters · 5 tries</div>
   <div class="grid" id="grid"></div>
   <div class="msg" id="msg"></div>
   <div class="keyboard" id="keyboard"></div>
 
-  <div class="lock" id="lockBtn">🔒</div>
+  <div class="lock" id="lockBtn">⚙️</div>
   <div class="lock-box" id="lockBox">
     <input id="lockKey" type="password" placeholder="PASSCODE">
-    <button id="lockGo">REVEAL</button>
+    <button id="lockGo">SPILL IT 🫢</button>
     <div class="lock-reveal" id="lockOut"></div>
   </div>
 <script>
 const ID = ${JSON.stringify(id)};
 const LEN = ${len};
-const MAX = 6;
+const MAX = 5;
 let row = 0, col = 0;
 let board = Array.from({length:MAX}, () => Array(LEN).fill(''));
 let done = false;
@@ -332,7 +332,7 @@ async function submit(){
   if (data.solved){
     done=true; msg.innerHTML = "YES. THAT'S THE WORD. 💌";
   } else if (data.exhausted){
-    done=true; msg.innerHTML = "Out of tries — it was <b>"+data.word+"</b>";
+    done=true; msg.innerHTML = "YOU LOSE 💔 — it was <b>"+data.word+"</b>";
   }
 }
 document.addEventListener('keydown', e=>{
@@ -353,7 +353,7 @@ document.getElementById('lockGo').onclick = async () => {
     body: JSON.stringify({key})
   });
   const data = await res.json();
-  out.textContent = data.error ? data.error : ('Word: ' + data.word);
+  out.textContent = data.error ? data.error : ('no cap, the word is: ' + data.word);
 };
 </script>
 </body></html>`;
