@@ -15,186 +15,29 @@ const WORDS = {
   hard: ['JOURNEY','WHISPER','FANTASY','ROMANCE','SUNRISE','MIDNIGHT','CRYSTAL','FOREVER','PASSION','THUNDER','MYSTERY','CHARMER','KINGDOM','RAINBOW','SERIOUS','PUZZLES','TWILIGHT','ADVENTURE','TREASURE','WONDERFUL']
 };
 
-const CSS = `
-*{box-sizing:border-box}body{margin:0;background:#0e0e12;color:#eee;font-family:monospace;min-height:100vh;padding:18px 8px 30px;display:flex;flex-direction:column;align-items:center}h1{letter-spacing:.15em;margin:0 0 5px}.tag,.small{color:#888;font-size:.76rem;text-align:center}.panel,.result{width:min(100%,390px);background:#17171d;border:1px solid #2a2a33;border-radius:12px;padding:18px}input,select,button{font:inherit}input,select{width:100%;padding:12px;margin:7px 0;min-height:46px;background:#0e0e12;color:#eee;border:1px solid #2a2a33;border-radius:7px}button{border:0;border-radius:7px;padding:11px;background:#ff5d8f;color:#111;font-weight:bold;cursor:pointer;margin-top:7px}button:disabled{opacity:.55}.grid{width:min(100%,360px);display:grid;gap:4px;margin:12px auto}.row{display:grid;gap:4px}.cell{aspect-ratio:1;border:2px solid #2a2a33;border-radius:4px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:1.1rem}.correct{background:#4caf6d!important;border-color:#4caf6d!important}.present{background:#c9a227!important;border-color:#c9a227!important}.absent{background:#3b3b42!important;border-color:#3b3b42!important}.keyboard{width:min(100%,440px);display:flex;flex-direction:column;gap:4px}.krow{display:flex;gap:4px}.key{margin:0;background:#292931;color:#eee;height:42px;padding:0;flex:1}.wide{flex:1.5;font-size:.65rem}.tools{width:min(100%,440px);display:flex;gap:6px}.tools button{flex:1;background:#292931;color:#eee}.msg{text-align:center;min-height:22px;margin:8px}.settings{position:fixed;top:14px;right:14px;width:48px;height:48px;border-radius:50%;padding:0;margin:0;background:#292931;color:#fff;font-size:23px;z-index:5}.modal{position:fixed;inset:0;background:#000c;display:flex;align-items:center;justify-content:center;padding:18px;z-index:20}.modal .panel{max-height:90vh;overflow:auto}a{color:#ff5d8f}
-`;
+const CSS = `*{box-sizing:border-box}body{margin:0;background:#0e0e12;color:#eee;font-family:monospace;min-height:100vh;padding:18px 8px 30px;display:flex;flex-direction:column;align-items:center}h1{letter-spacing:.15em;margin:0 0 5px}.tag,.small{color:#888;font-size:.76rem;text-align:center}.panel,.result{width:min(100%,390px);background:#17171d;border:1px solid #2a2a33;border-radius:12px;padding:18px}input,select,button{font:inherit}input,select{width:100%;padding:12px;margin:7px 0;min-height:46px;background:#0e0e12;color:#eee;border:1px solid #2a2a33;border-radius:7px}button{border:0;border-radius:7px;padding:11px;background:#ff5d8f;color:#111;font-weight:bold;cursor:pointer;margin-top:7px}button:disabled{opacity:.55}.grid{width:min(100%,360px);display:grid;gap:4px;margin:12px auto}.row{display:grid;gap:4px}.cell{aspect-ratio:1;border:2px solid #2a2a33;border-radius:4px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:1.1rem}.correct{background:#4caf6d!important;border-color:#4caf6d!important}.present{background:#c9a227!important;border-color:#c9a227!important}.absent{background:#3b3b42!important;border-color:#3b3b42!important}.keyboard{width:min(100%,440px);display:flex;flex-direction:column;gap:4px}.krow{display:flex;gap:4px}.key{margin:0;background:#292931;color:#eee;height:42px;padding:0;flex:1}.wide{flex:1.5;font-size:.65rem}.tools{width:min(100%,440px);display:flex;gap:6px}.tools button{flex:1;background:#292931;color:#eee}.msg{text-align:center;min-height:22px;margin:8px}.settings{position:fixed;top:14px;right:14px;width:48px;height:48px;border-radius:50%;padding:0;margin:0;background:#292931;color:#fff;font-size:23px;z-index:5}.modal{position:fixed;inset:0;background:#000c;display:flex;align-items:center;justify-content:center;padding:18px;z-index:20}.modal .panel{max-height:90vh;overflow:auto}a{color:#ff5d8f}`;
 
-function db(){
-  try { return fs.existsSync(DB) ? JSON.parse(fs.readFileSync(DB,'utf8')) : {}; }
-  catch { return {}; }
-}
-function save(data){ fs.writeFileSync(DB, JSON.stringify(data,null,2)); }
-function id(){ return crypto.randomBytes(6).toString('hex'); }
-function clean(value,n=220){ return String(value ?? '').trim().slice(0,n); }
-function attempts(mode){ return mode === 'hard' ? 3 : mode === 'chill' ? 7 : 5; }
-function getGame(key){
-  const games=db();
-  return games[key] || Object.values(games).find(g => g.slug === key || g.id === key);
-}
-function grade(word,guess){
-  const result=Array(word.length).fill('absent');
-  const left={};
-  for(let i=0;i<word.length;i++){
-    if(guess[i]===word[i]) result[i]='correct';
-    else left[word[i]]=(left[word[i]]||0)+1;
-  }
-  for(let i=0;i<word.length;i++){
-    if(result[i]!=='correct' && left[guess[i]]){ result[i]='present'; left[guess[i]]--; }
-  }
-  return result;
-}
-function esc(value){
-  return String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-}
+function db(){try{return fs.existsSync(DB)?JSON.parse(fs.readFileSync(DB,'utf8')):{}}catch{return{}}}
+function save(data){fs.writeFileSync(DB,JSON.stringify(data,null,2))}
+function id(){return crypto.randomBytes(6).toString('hex')}
+function clean(value,n=220){return String(value??'').trim().slice(0,n)}
+function attempts(mode){return mode==='hard'?3:mode==='chill'?7:5}
+function getGame(key){const games=db();return games[key]||Object.values(games).find(g=>g.slug===key||g.id===key)}
+function grade(word,guess){const result=Array(word.length).fill('absent'),left={};for(let i=0;i<word.length;i++){if(guess[i]===word[i])result[i]='correct';else left[word[i]]=(left[word[i]]||0)+1}for(let i=0;i<word.length;i++)if(result[i]!=='correct'&&left[guess[i]]){result[i]='present';left[guess[i]]--}return result}
+function esc(value){return String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 
-function home(){
-return `<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><title>DATE ME</title><style>${CSS}</style><body>
-<h1>DATE ME</h1><div class="tag">// make a word, send the link, watch them struggle 😭</div>
-<div class="panel"><input id="name" placeholder="YOUR NAME"><input id="word" placeholder="SECRET WORD · 3-12 LETTERS" maxlength="12"><button id="create">CREATE LINK</button>
-<details><summary>OPTIONAL EXTRAS ⚙️</summary><select id="mode"><option value="normal">Normal · 5 tries</option><option value="hard">Hard · 3 tries</option><option value="chill">Chill · 7 tries</option></select>
-<label class="small">Hints <input id="hints" type="checkbox"></label><label class="small">Timer <input id="timer" type="checkbox"></label><label class="small">Reactions <input id="reactions" type="checkbox"></label>
-<input id="message" placeholder="SECRET MESSAGE"><input id="reward" placeholder="SECRET REWARD"></details><div id="out"></div></div>
-<div class="small" style="margin-top:12px"><a href="/solo">PLAY ALONE 🎮</a></div>
-<script>
-(()=>{
-const $=id=>document.getElementById(id);
-$('word').addEventListener('input',e=>e.target.value=e.target.value.replace(/[^a-z]/gi,'').toUpperCase());
-$('create').addEventListener('click',async()=>{
- const name=$('name').value.trim(),word=$('word').value.trim().toUpperCase(),out=$('out'),btn=$('create');
- if(!name){out.textContent='Enter your name.';return}
- if(!/^[A-Z]{3,12}$/.test(word)){out.textContent='Secret word must be 3-12 letters.';return}
- btn.disabled=true;out.textContent='CREATING...';
- try{
-  const r=await fetch('/api/create',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,word,mode:$('mode').value,hintsEnabled:$('hints').checked,timerEnabled:$('timer').checked,reactionsEnabled:$('reactions').checked,message:$('message').value,reward:$('reward').value})});
-  const d=await r.json();if(!r.ok)throw new Error(d.error||'Could not create link');
-  out.innerHTML='<div class="result">LINK CREATED:<br><br>'+d.link+'<br><button id="copy">COPY LINK</button><br><a href="'+d.link+'">OPEN GAME 🎮</a></div>';
-  $('copy').onclick=async()=>{try{await navigator.clipboard.writeText(d.link);$('copy').textContent='COPIED ✓'}catch{$('copy').textContent='COPY FAILED'}};
- }catch(e){out.textContent='❌ '+e.message}finally{btn.disabled=false}
-});
-})();
-</script></body>`;
-}
+function home(){return `<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><title>DATE ME</title><style>${CSS}</style><body><h1>DATE ME</h1><div class="tag">// make a word, send the link, watch them struggle 😭</div><div class="panel"><input id="name" placeholder="YOUR NAME"><input id="word" placeholder="SECRET WORD · 3-12 LETTERS" maxlength="12"><button id="create">CREATE LINK</button><details><summary>OPTIONAL EXTRAS ⚙️</summary><select id="mode"><option value="normal">Normal · 5 tries</option><option value="hard">Hard · 3 tries</option><option value="chill">Chill · 7 tries</option></select><label class="small">Hints <input id="hints" type="checkbox"></label><label class="small">Timer <input id="timer" type="checkbox"></label><label class="small">Reactions <input id="reactions" type="checkbox"></label><input id="message" placeholder="SECRET MESSAGE"><input id="reward" placeholder="SECRET REWARD"></details><div id="out"></div></div><div class="small" style="margin-top:12px"><a href="/solo">PLAY ALONE 🎮</a></div><script>(()=>{const $=id=>document.getElementById(id);$('word').addEventListener('input',e=>e.target.value=e.target.value.replace(/[^a-z]/gi,'').toUpperCase());$('create').addEventListener('click',async()=>{const name=$('name').value.trim(),word=$('word').value.trim().toUpperCase(),out=$('out'),btn=$('create');if(!name){out.textContent='Enter your name.';return}if(!/^[A-Z]{3,12}$/.test(word)){out.textContent='Secret word must be 3-12 letters.';return}btn.disabled=true;out.textContent='CREATING...';try{const r=await fetch('/api/create',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,word,mode:$('mode').value,hintsEnabled:$('hints').checked,timerEnabled:$('timer').checked,reactionsEnabled:$('reactions').checked,message:$('message').value,reward:$('reward').value})});const d=await r.json();if(!r.ok)throw new Error(d.error||'Could not create link');out.innerHTML='<div class="result">LINK CREATED:<br><br>'+d.link+'<br><button id="copy">COPY LINK</button><br><a href="'+d.link+'">OPEN GAME 🎮</a></div>';$('copy').onclick=async()=>{try{await navigator.clipboard.writeText(d.link);$('copy').textContent='COPIED ✓'}catch{$('copy').textContent='COPY FAILED'}}}catch(e){out.textContent='❌ '+e.message}finally{btn.disabled=false}})})()</script></body>`}
+function solo(){return `<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><title>PLAY ALONE</title><style>${CSS}</style><body><h1>PLAY ALONE</h1><div class="tag">// choose your difficulty 🎮</div><div class="panel"><a href="/solo/start/easy"><button type="button">🟢 EASY</button></a><a href="/solo/start/medium"><button type="button">🟡 MEDIUM</button></a><a href="/solo/start/hard"><button type="button">🔴 HARD</button></a></div><a href="/">← CREATE A LINK</a></body>`}
 
-function solo(){
-return `<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><title>PLAY ALONE</title><style>${CSS}</style><body>
-<h1>PLAY ALONE</h1><div class="tag">// choose your difficulty 🎮</div><div class="panel">
-<a href="/solo/start/easy"><button type="button">🟢 EASY</button></a><a href="/solo/start/medium"><button type="button">🟡 MEDIUM</button></a><a href="/solo/start/hard"><button type="button">🔴 HARD</button></a>
-</div><a href="/">← CREATE A LINK</a></body>`;
-}
-
-function play(g){
-const name=g.solo?'Solo Mode':g.name;
-const client=`
-const ID=${JSON.stringify(g.id)};
-const LEN=${g.word.length};
-const MAX=${g.attempts};
-const TIMER=${g.timerEnabled?'true':'false'};
-const NAME=${JSON.stringify(name)};
-let row=0,col=0,done=false,start=Date.now();
-const board=Array.from({length:MAX},()=>Array(LEN).fill(''));
-const grid=document.getElementById('grid'),keyboard=document.getElementById('keyboard'),msg=document.getElementById('msg'),keys={};
-function makeGrid(){
- for(let r=0;r<MAX;r++){
-  const rr=document.createElement('div');rr.className='row';rr.style.gridTemplateColumns='repeat('+LEN+',1fr)';
-  for(let c=0;c<LEN;c++){const cell=document.createElement('div');cell.className='cell';cell.id='cell-'+r+'-'+c;rr.appendChild(cell)}
-  grid.appendChild(rr);
- }
-}
-function addKey(parent,label,fn,wide){const b=document.createElement('button');b.type='button';b.className='key'+(wide?' wide':'');b.textContent=label;b.addEventListener('click',fn);parent.appendChild(b);if(label.length===1)keys[label]=b;}
-function makeKeyboard(){
- const r1=document.createElement('div'),r2=document.createElement('div'),r3=document.createElement('div');r1.className=r2.className=r3.className='krow';keyboard.append(r1,r2,r3);
- for(const x of 'QWERTYUIOP')addKey(r1,x,()=>press(x));
- for(const x of 'ASDFGHJKL')addKey(r2,x,()=>press(x));
- addKey(r3,'ENTER',submit,true);for(const x of 'ZXCVBNM')addKey(r3,x,()=>press(x));addKey(r3,'DEL',back,true);
-}
-function press(ch){if(done||col>=LEN)return;board[row][col]=ch;document.getElementById('cell-'+row+'-'+col).textContent=ch;col++;}
-function back(){if(done||col===0)return;col--;board[row][col]='';document.getElementById('cell-'+row+'-'+col).textContent='';}
-function lock(value){document.querySelectorAll('.key').forEach(k=>k.disabled=value);}
-async function submit(){
- if(done||col!==LEN)return;
- const guess=board[row].join('');lock(true);
- try{
-  const r=await fetch('/api/guess/'+encodeURIComponent(ID),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({guess})});
-  const d=await r.json();if(!r.ok)throw new Error(d.error||'Guess failed');
-  d.result.forEach((state,i)=>{const cell=document.getElementById('cell-'+row+'-'+i);cell.classList.add(state);if(keys[guess[i]])keys[guess[i]].classList.add(state)});
-  msg.textContent=d.feedback||'Good luck 👀';
-  if(d.solved||d.exhausted){done=true;const box=document.createElement('div');box.className='result';box.innerHTML=d.solved?'<b>💌 SOLVED!</b><br>'+(row+1)+'/'+MAX+' tries':'<b>💀 GAME OVER</b><br>Secret word is hidden in settings 🔒';document.body.appendChild(box);return;}
-  row++;col=0;lock(false);
- }catch(e){msg.textContent='❌ '+e.message;lock(false)}
-}
-function makeShareText(){
- const rows=[];
- for(let r=0;r<row+(done?1:0);r++){
-  const guess=board[r].join('');if(!guess)continue;
-  let line=(r+1)+' ';for(let c=0;c<LEN;c++){const cell=document.getElementById('cell-'+r+'-'+c);line+=cell.classList.contains('correct')?'🟩':cell.classList.contains('present')?'🟨':'⬛';}rows.push(line);
- }
- return 'DATE ME 💌\\n'+NAME+'\\n'+rows.join('\\n')+'\\n\\n'+location.href;
-}
-async function share(){
- const text=makeShareText();
- try{
-  const canvas=document.createElement('canvas'),ctx=canvas.getContext('2d');canvas.width=900;canvas.height=220+Math.max(1,row)*60;
-  ctx.fillStyle='#0e0e12';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.fillStyle='#fff';ctx.font='bold 48px monospace';ctx.fillText('DATE ME 💌',50,65);ctx.font='28px monospace';ctx.fillText(NAME,50,108);ctx.font='32px monospace';
-  const rows=text.split('\\n').slice(2,-2);rows.forEach((line,i)=>ctx.fillText(line,50,165+i*52));ctx.font='18px monospace';ctx.fillStyle='#888';ctx.fillText(location.href,50,canvas.height-25);
-  const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));if(!blob)throw new Error('Image creation failed');
-  const file=new File([blob],'date-me-result.png',{type:'image/png'});
-  if(navigator.share && navigator.canShare && navigator.canShare({files:[file]})){await navigator.share({title:'DATE ME',text:text,files:[file]});return;}
-  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='date-me-result.png';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
-  msg.textContent='📸 Result image saved!';
- }catch(e){if(e.name!=='AbortError')msg.textContent='❌ Could not create share image';}
-}
-async function settings(){
- const password=prompt('🔒 Enter creator password to view the secret word:');if(password===null)return;
- try{
-  const r=await fetch('/api/admin/reveal',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:password,key:ID})});
-  const d=await r.json();if(!r.ok)throw new Error(d.error||'Wrong password');
-  const modal=document.createElement('div');modal.className='modal';modal.innerHTML='<div class="panel"><h2>⚙️ SETTINGS</h2><p>🔑 SECRET WORD: <b>'+d.word+'</b></p><p>Guesses: '+d.guesses+' / '+d.attempts+'</p><button id="closeSettings" type="button">CLOSE</button></div>';document.body.appendChild(modal);document.getElementById('closeSettings').onclick=()=>modal.remove();
- }catch(e){alert('❌ '+e.message)}
-}
-makeGrid();makeKeyboard();
-document.getElementById('share').addEventListener('click',share);document.getElementById('settings').addEventListener('click',settings);
-document.addEventListener('keydown',e=>{if(e.key==='Enter')submit();else if(e.key==='Backspace')back();else if(/^[a-zA-Z]$/.test(e.key))press(e.key.toUpperCase());});
-if(TIMER)setInterval(()=>{const s=Math.floor((Date.now()-start)/1000);document.getElementById('clock').textContent='⏱ '+Math.floor(s/60)+':'+String(s%60).padStart(2,'0')},1000);
-`;
-return `<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><title>DATE ME — PLAY</title><style>${CSS}</style><body>
-<button class="settings" id="settings" type="button">⚙️</button><h1>DATE ME</h1>
-<div class="tag">${esc(name)} · ${g.word.length} letters · ${g.attempts} tries</div><div id="clock" class="tag"></div>
-<div id="grid" class="grid"></div><div id="msg" class="msg">Type your guess below 👇</div><div id="keyboard" class="keyboard"></div>
-<div class="tools"><button id="share" type="button">📤 SHARE RESULT</button></div>
-<script>${client}</script></body>`;
-}
+function play(g){const name=g.solo?'Solo Mode':g.name;const client=`const ID=${JSON.stringify(g.id)},LEN=${g.word.length},MAX=${g.attempts},TIMER=${!!g.timerEnabled},NAME=${JSON.stringify(name)};let row=0,col=0,done=false,start=Date.now();const board=Array.from({length:MAX},()=>Array(LEN).fill('')),grid=document.getElementById('grid'),keyboard=document.getElementById('keyboard'),msg=document.getElementById('msg'),keys={};function makeGrid(){for(let r=0;r<MAX;r++){const rr=document.createElement('div');rr.className='row';rr.style.gridTemplateColumns='repeat('+LEN+',1fr)';for(let c=0;c<LEN;c++){const cell=document.createElement('div');cell.className='cell';cell.id='cell-'+r+'-'+c;rr.appendChild(cell)}grid.appendChild(rr)}}function addKey(parent,label,fn,wide){const b=document.createElement('button');b.type='button';b.className='key'+(wide?' wide':'');b.textContent=label;b.addEventListener('click',fn);parent.appendChild(b);if(label.length===1)keys[label]=b}function makeKeyboard(){const r1=document.createElement('div'),r2=document.createElement('div'),r3=document.createElement('div');r1.className=r2.className=r3.className='krow';keyboard.append(r1,r2,r3);for(const x of 'QWERTYUIOP')addKey(r1,x,()=>press(x));for(const x of 'ASDFGHJKL')addKey(r2,x,()=>press(x));addKey(r3,'ENTER',submit,true);for(const x of 'ZXCVBNM')addKey(r3,x,()=>press(x));addKey(r3,'DEL',back,true)}function press(ch){if(done||col>=LEN)return;board[row][col]=ch;document.getElementById('cell-'+row+'-'+col).textContent=ch;col++}function back(){if(done||col===0)return;col--;board[row][col]='';document.getElementById('cell-'+row+'-'+col).textContent=''}function lock(v){document.querySelectorAll('.key').forEach(k=>k.disabled=v)}async function submit(){if(done||col!==LEN)return;const guess=board[row].join('');lock(true);try{const r=await fetch('/api/guess/'+encodeURIComponent(ID),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({guess})});const d=await r.json();if(!r.ok)throw new Error(d.error||'Guess failed');d.result.forEach((state,i)=>{document.getElementById('cell-'+row+'-'+i).classList.add(state);if(keys[guess[i]])keys[guess[i]].classList.add(state)});msg.textContent=d.feedback||'';if(d.solved||d.exhausted){done=true;const box=document.createElement('div');box.className='result';box.innerHTML=d.solved?'<b>💌 SOLVED!</b><br>'+(row+1)+'/'+MAX+' tries':'<b>💀 GAME OVER</b>';document.body.appendChild(box);return}row++;col=0;lock(false)}catch(e){msg.textContent='❌ '+e.message;lock(false)}}function shareText(){const rows=[];for(let r=0;r<row+(done?1:0);r++){const guess=board[r].join('');if(!guess)continue;let line=(r+1)+' ';for(let c=0;c<LEN;c++){const cell=document.getElementById('cell-'+r+'-'+c);line+=cell.classList.contains('correct')?'🟩':cell.classList.contains('present')?'🟨':'⬛'}rows.push(line)}return 'DATE ME 💌\\n'+NAME+'\\n'+rows.join('\\n')+'\\n\\n'+location.href}async function share(){const text=shareText();try{const canvas=document.createElement('canvas'),ctx=canvas.getContext('2d');canvas.width=900;canvas.height=220+Math.max(1,row)*60;ctx.fillStyle='#0e0e12';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.fillStyle='#fff';ctx.font='bold 48px monospace';ctx.fillText('DATE ME 💌',50,65);ctx.font='28px monospace';ctx.fillText(NAME,50,108);ctx.font='32px monospace';const rows=text.split('\\n').slice(2,-2);rows.forEach((line,i)=>ctx.fillText(line,50,165+i*52));ctx.font='18px monospace';ctx.fillStyle='#888';ctx.fillText(location.href,50,canvas.height-25);const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));if(!blob)throw new Error('Image creation failed');const file=new File([blob],'date-me-result.png',{type:'image/png'});if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({title:'DATE ME',text,files:[file]});return}const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='date-me-result.png';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1000);msg.textContent='📸 Result image saved!'}catch(e){if(e.name!=='AbortError')msg.textContent='❌ Could not create share image'}}async function settings(){const password=prompt('Creator password:');if(password===null)return;try{const r=await fetch('/api/admin/reveal',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password,key:ID})});const d=await r.json();if(!r.ok)throw new Error(d.error||'Wrong password');const modal=document.createElement('div');modal.className='modal';modal.innerHTML='<div class="panel"><h2>⚙️ SETTINGS</h2><p>SECRET WORD: <b>'+d.word+'</b></p><p>Guesses: '+d.guesses+' / '+d.attempts+'</p><button id="closeSettings" type="button">CLOSE</button></div>';document.body.appendChild(modal);document.getElementById('closeSettings').onclick=()=>modal.remove()}catch(e){alert('❌ '+e.message)}}makeGrid();makeKeyboard();document.getElementById('share').addEventListener('click',share);document.getElementById('settings').addEventListener('click',settings);document.addEventListener('keydown',e=>{if(e.key==='Enter')submit();else if(e.key==='Backspace')back();else if(/^[a-zA-Z]$/.test(e.key))press(e.key.toUpperCase())});if(TIMER)setInterval(()=>{const s=Math.floor((Date.now()-start)/1000);document.getElementById('clock').textContent='⏱ '+Math.floor(s/60)+':'+String(s%60).padStart(2,'0')},1000);`;
+return `<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><title>DATE ME — PLAY</title><style>${CSS}</style><body><button class="settings" id="settings" type="button">⚙️</button><h1>DATE ME</h1><div class="tag">${esc(name)} · ${g.word.length} letters · ${g.attempts} tries</div><div id="clock" class="tag"></div><div id="grid" class="grid"></div><div id="msg" class="msg">Type your guess below 👇</div><div id="keyboard" class="keyboard"></div><div class="tools"><button id="share" type="button">📤 SHARE RESULT</button></div><script>${client}</script></body>`}
 
 app.get('/',(req,res)=>res.send(home()));
 app.get('/solo',(req,res)=>res.send(solo()));
-app.get('/solo/start/:difficulty',(req,res)=>{
- const difficulty=['easy','medium','hard'].includes(req.params.difficulty)?req.params.difficulty:'easy';
- const list=WORDS[difficulty],word=list[Math.floor(Math.random()*list.length)];
- const game={id:id(),slug:'solo-'+id(),name:'Solo Player',word,attempts:difficulty==='hard'?3:difficulty==='medium'?5:7,solo:true,hintsEnabled:false,timerEnabled:false,reactionsEnabled:true,guesses:[],solved:false,exhausted:false,message:'',reward:''};
- const games=db();games[game.id]=game;save(games);res.redirect('/play/'+game.slug);
-});
-app.get('/play/:key',(req,res)=>{const game=getGame(req.params.key);if(!game)return res.status(404).send('<h2>Game not found</h2><a href="/">Home</a>');res.send(play(game));});
-app.post('/api/create',(req,res)=>{
- const name=clean(req.body?.name,32),word=clean(req.body?.word,12).toUpperCase();
- if(!name)return res.status(400).json({error:'Name is required'});
- if(!/^[A-Z]{3,12}$/.test(word))return res.status(400).json({error:'Secret word must be 3-12 letters'});
- const game={id:id(),slug:id(),name,word,attempts:attempts(req.body?.mode),solo:false,hintsEnabled:!!req.body?.hintsEnabled,timerEnabled:!!req.body?.timerEnabled,reactionsEnabled:!!req.body?.reactionsEnabled,guesses:[],solved:false,exhausted:false,message:clean(req.body?.message),reward:clean(req.body?.reward)};
- const games=db();games[game.id]=game;save(games);res.json({link:req.protocol+'://'+req.get('host')+'/play/'+game.slug,name});
-});
-app.post('/api/admin/reveal',(req,res)=>{
- if(req.body?.password!==ADMIN_PASSWORD)return res.status(401).json({error:'Wrong password'});
- const game=getGame(req.body?.key);if(!game)return res.status(404).json({error:'Game not found'});
- res.json({word:game.word,guesses:game.guesses.length,attempts:game.attempts});
-});
-app.post('/api/guess/:id',(req,res)=>{
- const game=getGame(req.params.id);if(!game)return res.status(404).json({error:'Game not found'});
- if(game.solved||game.exhausted)return res.status(400).json({error:'Game already finished'});
- const guess=clean(req.body?.guess,20).toUpperCase();
- if(guess.length!==game.word.length||!/^[A-Z]+$/.test(guess))return res.status(400).json({error:'Enter exactly '+game.word.length+' letters'});
- const result=grade(game.word,guess);game.guesses.push(guess);game.solved=guess===game.word;game.exhausted=!game.solved&&game.guesses.length>=game.attempts;
- const games=db();games[game.id]=game;save(games);
- const correct=result.filter(x=>x==='correct').length;
- const feedback=game.solved?'YOOOO YOU GOT IT 😭🔥':correct>=game.word.length-1?'BRO YOU WERE ONE LETTER AWAY 😭':'';
- res.json({result,solved:game.solved,exhausted:game.exhausted,feedback});
-});
+app.get('/solo/start/:difficulty',(req,res)=>{const d=['easy','medium','hard'].includes(req.params.difficulty)?req.params.difficulty:'easy',word=WORDS[d][Math.floor(Math.random()*WORDS[d].length)],game={id:id(),slug:'solo-'+id(),name:'Solo Player',word,attempts:d==='hard'?3:d==='medium'?5:7,solo:true,hintsEnabled:false,timerEnabled:false,reactionsEnabled:true,guesses:[],solved:false,exhausted:false,message:'',reward:''};const games=db();games[game.id]=game;save(games);res.redirect('/play/'+game.slug)});
+app.get('/play/:key',(req,res)=>{const g=getGame(req.params.key);if(!g)return res.status(404).send('<h2>Game not found</h2><a href="/">Home</a>');res.send(play(g))});
+app.post('/api/create',(req,res)=>{const name=clean(req.body?.name,32),word=clean(req.body?.word,12).toUpperCase();if(!name)return res.status(400).json({error:'Name is required'});if(!/^[A-Z]{3,12}$/.test(word))return res.status(400).json({error:'Secret word must be 3-12 letters'});const game={id:id(),slug:id(),name,word,attempts:attempts(req.body?.mode),solo:false,hintsEnabled:!!req.body?.hintsEnabled,timerEnabled:!!req.body?.timerEnabled,reactionsEnabled:!!req.body?.reactionsEnabled,guesses:[],solved:false,exhausted:false,message:clean(req.body?.message),reward:clean(req.body?.reward)};const games=db();games[game.id]=game;save(games);res.json({link:req.protocol+'://'+req.get('host')+'/play/'+game.slug,name})});
+app.post('/api/admin/reveal',(req,res)=>{if(req.body?.password!==ADMIN_PASSWORD)return res.status(401).json({error:'Wrong password'});const g=getGame(req.body?.key);if(!g)return res.status(404).json({error:'Game not found'});res.json({word:g.word,guesses:g.guesses.length,attempts:g.attempts})});
+app.post('/api/guess/:id',(req,res)=>{const g=getGame(req.params.id);if(!g)return res.status(404).json({error:'Game not found'});if(g.solved||g.exhausted)return res.status(400).json({error:'Game already finished',word:g.word});const guess=clean(req.body?.guess,20).toUpperCase();if(guess.length!==g.word.length||!/^[A-Z]+$/.test(guess))return res.status(400).json({error:'Enter exactly '+g.word.length+' letters'});const result=grade(g.word,guess);g.guesses.push(guess);g.solved=guess===g.word;g.exhausted=!g.solved&&g.guesses.length>=g.attempts;const games=db();games[g.id]=g;save(games);res.json({result,solved:g.solved,exhausted:g.exhausted,word:g.exhausted?g.word:undefined,feedback:g.solved?'YOOOO YOU GOT IT 😭🔥':result.filter(x=>x==='correct').length>=g.word.length-1?'BRO YOU WERE ONE LETTER AWAY 😭':''})});
 app.get('/health',(req,res)=>res.json({ok:true}));
 app.listen(PORT,()=>console.log('Date Wordle running on '+PORT));
