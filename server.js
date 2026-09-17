@@ -12,7 +12,6 @@ const path = require("path");
 const app = express();
 app.use(express.json());
 
-// ---------- CONFIG: edit these before deploying ----------
 const PORT = process.env.PORT || 3000;
 const MAX_ATTEMPTS = 5;
 const DB_FILE = path.join(__dirname, "games.json");
@@ -21,46 +20,32 @@ const ADMIN_KEYS = [
   process.env.ADMIN_KEY_1 || "change-me-1",
   process.env.ADMIN_KEY_2 || "change-me-2",
 ];
-// -----------------------------------------------------------
 
 function loadDB() {
   if (!fs.existsSync(DB_FILE)) return {};
-  try {
-    return JSON.parse(fs.readFileSync(DB_FILE, "utf8"));
-  } catch {
-    return {};
-  }
+  try { return JSON.parse(fs.readFileSync(DB_FILE, "utf8")); }
+  catch { return {}; }
 }
-function saveDB(db) {
-  fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2));
-}
+function saveDB(db) { fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2)); }
 
 function evaluate(guess, answer) {
   const g = guess.split("");
   const a = answer.split("");
   const result = new Array(g.length).fill("absent");
   const remaining = {};
-
   for (let i = 0; i < g.length; i++) {
     if (g[i] === a[i]) result[i] = "correct";
     else remaining[a[i]] = (remaining[a[i]] || 0) + 1;
   }
   for (let i = 0; i < g.length; i++) {
     if (result[i] === "correct") continue;
-    if (remaining[g[i]] > 0) {
-      result[i] = "present";
-      remaining[g[i]]--;
-    }
+    if (remaining[g[i]] > 0) { result[i] = "present"; remaining[g[i]]--; }
   }
   return result;
 }
-
-function genId() {
-  return crypto.randomBytes(4).toString("hex");
-}
+function genId() { return crypto.randomBytes(4).toString("hex"); }
 
 app.get("/", (req, res) => res.send(createPageHTML()));
-
 app.get("/play/:id", (req, res) => {
   const db = loadDB();
   const game = db[req.params.id];
@@ -70,9 +55,7 @@ app.get("/play/:id", (req, res) => {
 
 app.post("/api/create", (req, res) => {
   const word = String(req.body.word || "").trim().toUpperCase();
-  if (!/^[A-Z]{3,12}$/.test(word)) {
-    return res.status(400).json({ error: "Word must be 3-12 letters, A-Z only, no spaces." });
-  }
+  if (!/^[A-Z]{3,12}$/.test(word)) return res.status(400).json({ error: "Word must be 3-12 letters, A-Z only, no spaces." });
   const id = genId();
   const db = loadDB();
   db[id] = { word, createdAt: Date.now(), solved: false, solvedAt: null, guesses: [] };
@@ -84,15 +67,11 @@ app.post("/api/guess/:id", (req, res) => {
   const db = loadDB();
   const game = db[req.params.id];
   if (!game) return res.status(404).json({ error: "Game not found." });
-  if (game.solved) return res.json({ result: null, solved: true, attemptsLeft: 0, word: game.word });
-  if (game.guesses.length >= MAX_ATTEMPTS) {
-    return res.json({ result: null, solved: false, exhausted: true, attemptsLeft: 0, word: game.word });
-  }
+  if (game.solved) return res.json({ result: null, solved: true, attemptsLeft: 0 });
+  if (game.guesses.length >= MAX_ATTEMPTS) return res.json({ result: null, solved: false, exhausted: true, attemptsLeft: 0 });
 
   const guess = String(req.body.guess || "").trim().toUpperCase();
-  if (guess.length !== game.word.length || !/^[A-Z]+$/.test(guess)) {
-    return res.status(400).json({ error: `Guess must be ${game.word.length} letters.` });
-  }
+  if (guess.length !== game.word.length || !/^[A-Z]+$/.test(guess)) return res.status(400).json({ error: `Guess must be ${game.word.length} letters.` });
 
   const result = evaluate(guess, game.word);
   const solved = guess === game.word;
@@ -104,14 +83,8 @@ app.post("/api/guess/:id", (req, res) => {
   const attemptsLeft = MAX_ATTEMPTS - game.guesses.length;
   const exhausted = !solved && attemptsLeft === 0;
 
-  // On the fifth failed guess, always send the answer to the client.
-  res.json({
-    result,
-    solved,
-    exhausted,
-    attemptsLeft,
-    word: exhausted || solved ? game.word : undefined,
-  });
+  // Never send the secret word to the player. This prevents cheating after the fifth try.
+  res.json({ result, solved, exhausted, attemptsLeft });
 });
 
 app.post("/api/reveal/:id", (req, res) => {
@@ -129,8 +102,8 @@ const BASE_CSS = `
   body{background:var(--bg);color:var(--fg);font-family:'Courier New',monospace;margin:0;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:32px 16px;}
   h1{letter-spacing:.15em;font-size:1.6rem;margin-bottom:4px}
   .tag{color:var(--muted);font-size:.85rem;margin-bottom:24px}
-  .panel{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:24px;max-width:420px;width:100%;}
-  input[type=text],input[type=password]{width:100%;background:#0e0e12;border:1px solid var(--border);color:var(--fg);padding:12px;border-radius:6px;font-family:inherit;font-size:1rem;letter-spacing:.1em;text-transform:uppercase;margin-bottom:12px;}
+  .panel{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:28px;max-width:500px;width:100%;}
+  input[type=text],input[type=password]{width:100%;background:#0e0e12;border:1px solid var(--border);color:var(--fg);padding:18px 14px;border-radius:8px;font-family:inherit;font-size:1.15rem;letter-spacing:.1em;text-transform:uppercase;margin-bottom:14px;min-height:58px;}
   button{width:100%;background:var(--accent);color:#111;border:none;padding:12px;border-radius:6px;font-weight:bold;font-family:inherit;font-size:1rem;cursor:pointer;}
   button:disabled{opacity:.5;cursor:default}
   .link-box{margin-top:16px;background:#0e0e12;border:1px dashed var(--border);padding:10px;border-radius:6px;word-break:break-all;font-size:.85rem;}
@@ -157,7 +130,6 @@ const BASE_CSS = `
   .lock-box input{margin-bottom:8px}
   .lock-box button{padding:8px}
   .lock-reveal{font-size:.85rem;margin-top:8px;color:var(--fg);word-break:break-all}
-  .answer{margin-top:10px;padding:10px;border:1px solid var(--border);border-radius:6px;text-align:center;font-weight:bold;}
 `;
 
 function createPageHTML() {
@@ -203,7 +175,7 @@ async function submit(){
   data.result.forEach((r,c)=>{const cell=document.getElementById('cell'+row+'-'+c);cell.classList.add(r);const k=keyEls[guess[c]];if(k&&!k.classList.contains('correct'))k.classList.add(r);});
   row++;col=0;
   if(data.solved){done=true;msg.innerHTML="YES. THAT'S THE WORD. 💌";}
-  else if(data.exhausted){done=true;msg.innerHTML="YOU LOSE 💔";const answer=document.createElement('div');answer.className='answer';answer.textContent='THE WORD WAS: '+data.word;msg.appendChild(answer);}
+  else if(data.exhausted){done=true;msg.innerHTML="YOU LOSE 💔 — no more tries.";}
 }
 document.addEventListener('keydown',e=>{if(e.key==='Enter')submit();else if(e.key==='Backspace')backspace();else if(/^[a-zA-Z]$/.test(e.key))press(e.key.toUpperCase());});
 const lockBtn=document.getElementById('lockBtn'),lockBox=document.getElementById('lockBox');lockBtn.onclick=()=>lockBox.classList.toggle('open');
