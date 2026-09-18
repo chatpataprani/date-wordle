@@ -2,6 +2,7 @@ const express=require('express');
 const crypto=require('crypto');
 const fs=require('fs');
 const path=require('path');
+const sharp=require('sharp');
 
 const app=express();
 app.use(express.json({limit:'30kb'}));
@@ -9,6 +10,7 @@ app.use(express.json({limit:'30kb'}));
 const PORT=process.env.PORT||3000;
 const DB=path.join(__dirname,'games.json');
 const ADMIN_PASSWORD=process.env.ADMIN_PASSWORD||'';
+const CANVA_TEMPLATE_URL="https://www.canva.com/d/DwHh5oq-WHxezEr";
 
 const WORDS={
   easy:['CAT','DOG','SUN','MOON','LOVE','DATE','CAKE','STAR','HOME','BLUE','PINK','BEAR','BOOK','RAIN','FIRE','TREE','FISH','GAME','GIFT','SMILE'],
@@ -29,6 +31,54 @@ function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&l
 function getGame(key){const games=db(),k=clean(key,120).replace(/^https?:\/\/[^/]+\/play\//,'').split('/')[0];return games[k]||Object.values(games).find(g=>g.id===k||g.slug===k)}
 function grade(word,guess){const out=Array(word.length).fill('absent'),left={};for(let i=0;i<word.length;i++){if(guess[i]===word[i])out[i]='correct';else left[word[i]]=(left[word[i]]||0)+1}for(let i=0;i<word.length;i++)if(out[i]!=='correct'&&left[guess[i]]>0){out[i]='present';left[guess[i]]--}return out}
 function auth(password){return !!ADMIN_PASSWORD&&password===ADMIN_PASSWORD}
+function xml(v){return String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&apos;')}
+function resultCardSvg(g){
+  const W=1080,H=1350,pad=56,inner=W-pad*2;
+  const rows=g.guesses||[], max=g.attempts||5, len=g.word.length;
+  const gradeRows=rows.map(x=>grade(g.word,x));
+  const letters=[...new Set(rows.join('').split(''))].sort().join(' ');
+  const status=g.solved?'YOU GOT IT!':'GAME OVER';
+  const statusColor=g.solved?'#4ade80':'#ff5d8f';
+  const escXml=xml;
+  const text=(x,y,t,size=28,fill='#f4f4f5',weight=500,anchor='start')=>'<text x="'+x+'" y="'+y+'" font-family="Arial, sans-serif" font-size="'+size+'px" font-weight="'+weight+'" fill="'+fill+'" text-anchor="'+anchor+'">'+escXml(t)+'</text>';
+  let out='<svg xmlns="http://www.w3.org/2000/svg" width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'"><rect width="100%" height="100%" rx="36" fill="#0d0f17"/>';
+  out+='<circle cx="90" cy="86" r="24" fill="#c084fc" opacity=".25"/><circle cx="990" cy="120" r="34" fill="#ff5d8f" opacity=".16"/>';
+  out+=text(pad,86,'DATE WORDLE',54,'#ffffff',800);
+  out+=text(pad,130,'Same word. Different vibes.',24,'#c084fc',600);
+  out+='<rect x="'+pad+'" y="170" width="'+inner+'" height="92" rx="22" fill="#171b27" stroke="#2c3344"/>';
+  out+=text(pad+26,210,status,34,statusColor,800);out+=text(W-pad-26,210,'Attempts: '+rows.length+'/'+max,27,'#b8bfd0',700,'end');
+  out+=text(pad+26,244,'Player: '+(g.solo?'Solo Player':g.name),22,'#a8adbd',500);
+  const gridX=pad,gridY=294,cell=52,gap=8,gridW=len*cell+(len-1)*gap,gridH=max*cell+(max-1)*gap;
+  out+='<rect x="'+gridX+'" y="'+(gridY-18)+'" width="'+(gridW+36)+'" height="'+(gridH+36)+'" rx="22" fill="#11151f" stroke="#252c3b"/>';
+  for(let r=0;r<max;r++){
+    for(let c=0;c<len;c++){
+      const x=gridX+18+c*(cell+gap),y=gridY+r*(cell+gap);let fill='#262d3b';
+      if(gradeRows[r]?.[c]==='correct')fill='#4ade80';else if(gradeRows[r]?.[c]==='present')fill='#facc15';else if(gradeRows[r]?.[c]==='absent')fill='#3f4655';
+      out+='<rect x="'+x+'" y="'+y+'" width="'+cell+'" height="'+cell+'" rx="10" fill="'+fill+'"/>';
+      if(rows[r]?.[c])out+=text(x+cell/2,y+36,rows[r][c],25,gradeRows[r][c]==='absent'?'#d9dce5':'#10131a',800,'middle');
+    }
+  }
+  const infoX=pad+gridW+86,infoW=W-infoX-pad;
+  out+='<rect x="'+infoX+'" y="'+(gridY-18)+'" width="'+infoW+'" height="'+Math.max(230,gridH+36)+'" rx="22" fill="#171b27" stroke="#2c3344"/>';
+  out+=text(infoX+24,gridY+24,'GAME STATS',25,'#c084fc',800);
+  out+=text(infoX+24,gridY+70,'Attempts',21,'#a8adbd');out+=text(W-pad-24,gridY+70,rows.length+'/'+max,22,'#fff',700,'end');
+  out+=text(infoX+24,gridY+112,'Hint used',21,'#a8adbd');out+=text(W-pad-24,gridY+112,g.hintUsed?'YES':'NO',22,g.hintUsed?'#4ade80':'#fff',700,'end');
+  out+=text(infoX+24,gridY+154,'Mode',21,'#a8adbd');out+=text(W-pad-24,gridY+154,(g.attempts===3?'Hard':g.attempts===7?'Chill':'Normal'),22,'#fff',700,'end');
+  out+=text(infoX+24,gridY+196,'Letters used',21,'#a8adbd');
+  const letterLines=(letters||'None').match(/.{1,13}/g)||['None'];letterLines.slice(0,5).forEach((l,i)=>out+=text(infoX+24,gridY+228+i*27,l,18,'#e5e7eb',600));
+  const lowerY=gridY+gridH+48, boxW=(inner-20)/2;
+  out+='<rect x="'+pad+'" y="'+lowerY+'" width="'+boxW+'" height="300" rx="22" fill="#171b27" stroke="#2c3344"/>';
+  out+=text(pad+24,lowerY+42,'WORDS GUESSED',25,'#c084fc',800);
+  rows.slice(0,7).forEach((w,i)=>out+=text(pad+28,lowerY+82+i*29,(i+1)+'. '+w,19,'#e5e7eb',600));
+  const rightX=pad+boxW+20;
+  out+='<rect x="'+rightX+'" y="'+lowerY+'" width="'+boxW+'" height="300" rx="22" fill="#171b27" stroke="#2c3344"/>';
+  out+=text(rightX+24,lowerY+42,'MESSAGE & REWARD',25,'#c084fc',800);
+  if(g.message)out+=text(rightX+24,lowerY+82,String(g.message).slice(0,42),18,'#f4f4f5',500);
+  if(g.reward)out+=text(rightX+24,lowerY+128,'Reward: '+String(g.reward).slice(0,35),18,'#facc15',700);
+  out+=text(rightX+24,lowerY+180,'GAME LINK',20,'#a8adbd',700);out+=text(rightX+24,lowerY+214,(('https://date-wordle.onrender.com/play/'+g.slug)).slice(0,48),16,'#c084fc',600);
+  out+=text(W/2,H-74,'Made with ♥ Date Wordle · Same game. Different stories.',22,'#a8adbd',600,'middle');
+  return out+'</svg>';
+}
 
 function home(){
 return `<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><title>DATE ME</title><style>${CSS}</style><body>
@@ -99,7 +149,7 @@ async function submit(){if(done||col!==LEN)return;const guess=board[row].join(''
 function shareText(){const lines=results.filter(Boolean).map(a=>a.map(s=>s==='correct'?'🟩':s==='present'?'🟨':'⬛').join(''));return NAME+' — DATE ME\\n'+lines.join('\\n')+'\\n\\n💡 Hint used: '+(hintUsed?'YES':'NO')+'\\n🎮 '+location.href}
 function canvaData(win){const guesses=guessHistory.map((g,i)=>(i+1)+'. '+g).join('\\n')||'None';const letters=[...lettersUsed].sort().join(' ')||'None';const grid=results.filter(Boolean).map(a=>a.map(s=>s==='correct'?'🟩':s==='present'?'🟨':'⬛').join('\\n')).join('\\n');return 'DATE WORDLE RESULT CARD\\nPlayer: '+NAME+'\\nResult: '+(win?'WON':'LOST')+'\\nAttempts: '+(win?Math.min(guessHistory.length,MAX):guessHistory.length)+'/'+MAX+'\\nHint used: '+(hintUsed?'YES':'NO')+(hintIndex!==null?' (position '+(hintIndex+1)+')':'')+'\\n\\nWords guessed:\\n'+guesses+'\\n\\nLetters used:\\n'+letters+'\\n\\nResult grid:\\n'+grid+'\\n\\nGame link: '+location.href}
 async function shareGame(){const text='Play my DATE ME game 🎮 '+location.href;try{if(navigator.share){await navigator.share({title:'DATE ME',text,url:location.href});return}await navigator.clipboard.writeText(text);msg.textContent='📋 Game link copied!'}catch(e){if(e.name!=='AbortError')msg.textContent='❌ Share failed'}}
-function finish(d,win){done=true;const used=guessHistory.length,box=document.createElement('div');box.className='result';box.innerHTML=win?'<b>💌 SOLVED!</b><div class="small">'+used+'/'+MAX+' tries</div>':'<b>💀 GAME OVER</b><div class="small">All '+MAX+' chances used</div>';if(win&&d.message)box.innerHTML+='<div style="margin-top:8px">💌 '+d.message+'</div>';if(win&&d.reward)box.innerHTML+='<div style="margin-top:8px">🎁 '+d.reward+'</div>';box.innerHTML+='<div class="small" style="margin-top:10px">💡 Hint used: '+(hintUsed?'YES':'NO')+'</div><div class="small" style="margin-top:6px">📝 Words guessed: '+(guessHistory.join(', ')||'None')+'</div><div class="small" style="margin-top:6px">🔤 Letters used: '+([...lettersUsed].sort().join(' ')||'None')+'</div>';document.body.appendChild(box);const copy=document.createElement('button');copy.textContent='📋 COPY RESULT';copy.onclick=()=>navigator.clipboard?.writeText(shareText());box.appendChild(copy);const canva=document.createElement('button');canva.textContent='🎨 COPY CANVA CARD DATA';canva.onclick=async()=>{try{await navigator.clipboard.writeText(canvaData(win));canva.textContent='COPIED ✓';}catch{canva.textContent='COPY FAILED'}};box.appendChild(canva)}
+function finish(d,win){done=true;const used=guessHistory.length,box=document.createElement('div');box.className='result';box.innerHTML=win?'<b>💌 SOLVED!</b><div class="small">'+used+'/'+MAX+' tries</div>':'<b>💀 GAME OVER</b><div class="small">All '+MAX+' chances used</div>';if(win&&d.message)box.innerHTML+='<div style="margin-top:8px">💌 '+d.message+'</div>';if(win&&d.reward)box.innerHTML+='<div style="margin-top:8px">🎁 '+d.reward+'</div>';box.innerHTML+='<div class="small" style="margin-top:10px">💡 Hint used: '+(hintUsed?'YES':'NO')+'</div><div class="small" style="margin-top:6px">📝 Words guessed: '+(guessHistory.join(', ')||'None')+'</div><div class="small" style="margin-top:6px">🔤 Letters used: '+([...lettersUsed].sort().join(' ')||'None')+'</div>';document.body.appendChild(box);const copy=document.createElement('button');copy.textContent='📋 COPY RESULT';copy.onclick=()=>navigator.clipboard?.writeText(shareText());box.appendChild(copy);const canva=document.createElement('button');canva.textContent='🎨 COPY CANVA CARD DATA';canva.onclick=async()=>{try{await navigator.clipboard.writeText(canvaData(win));canva.textContent='COPIED ✓';}catch{canva.textContent='COPY FAILED'}};box.appendChild(canva);const png=document.createElement('button');png.textContent='🖼️ DOWNLOAD RESULT PNG';png.onclick=()=>{const a=document.createElement('a');a.href='/api/result-card/'+encodeURIComponent(ID)+'.png';a.download='date-wordle-result.png';document.body.appendChild(a);a.click();a.remove()};box.appendChild(png);const cv=document.createElement('a');cv.href="https://www.canva.com/d/DwHh5oq-WHxezEr";cv.target='_blank';cv.rel='noopener';cv.textContent='🎨 OPEN CANVA TEMPLATE';cv.style.display='block';cv.style.textAlign='center';cv.style.marginTop='10px';box.appendChild(cv)}
 async function hint(){if(done||!HINTS||hintUsed)return;try{const p=prompt('Which letter position? (1-'+LEN+')');if(p===null)return;const index=Number(p)-1;if(!Number.isInteger(index)||index<0||index>=LEN)throw Error('Invalid position');const r=await fetch('/api/hint/'+encodeURIComponent(ID),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({index})});const d=await r.json();if(!r.ok)throw Error(d.error);hintUsed=true;hintIndex=index;msg.textContent='💡 Position '+(index+1)+' is '+d.letter+' · 1 try used';if(row<MAX-1){const hintRow=grid.children[row];if(hintRow)hintRow.querySelectorAll('.cell').forEach(x=>x.classList.add('absent'));row++;col=0}}catch(e){msg.textContent='❌ '+e.message}}
 async function react(v){try{const r=await fetch('/api/reaction/'+encodeURIComponent(ID),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({reaction:v})});msg.textContent=r.ok?'Reaction sent '+v:'❌ Reaction failed'}catch{msg.textContent='❌ Reaction failed'}}
 function openSettings(){const m=document.createElement('div');m.className='modal';m.innerHTML='<div class="panel"><h2>⚙️ SETTINGS</h2><div class="small">Private creator controls</div><input id="ap" type="password" placeholder="ADMIN PASSWORD" autocomplete="off"><button id="unlock" type="button">UNLOCK</button><button id="close" type="button" style="background:#292931;color:#eee">CLOSE</button><div id="ao" class="msg"></div></div>';document.body.appendChild(m);m.querySelector('#close').onclick=()=>m.remove();m.querySelector('#unlock').onclick=async()=>{const out=m.querySelector('#ao');try{const r=await fetch('/api/admin/reveal',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:m.querySelector('#ap').value,key:ID})});const d=await r.json();if(!r.ok)throw Error(d.error);out.innerHTML='🔑 SECRET WORD: <b>'+d.word+'</b><br>Guesses: '+d.guesses+' / '+d.attempts+'<br>Finished: '+(d.solved||d.exhausted?'Yes':'No');const reset=document.createElement('button');reset.textContent='🔄 RESET & TRY AGAIN';reset.onclick=async()=>{const rr=await fetch('/api/admin/reset/'+encodeURIComponent(ID),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:m.querySelector('#ap').value})});const x=await rr.json();out.textContent=rr.ok?'Reset ✓ Reloading...':'❌ '+x.error;if(rr.ok)setTimeout(()=>location.reload(),350)};out.appendChild(reset)}catch(e){out.textContent='❌ '+e.message}}}
@@ -130,5 +180,6 @@ app.post('/api/reaction/:id',(req,res)=>{const games=db(),g=getGame(req.params.i
 
 app.post('/api/admin/reveal',(req,res)=>{if(!ADMIN_PASSWORD)return res.status(503).json({error:'Admin password is not configured in Render'});if(!auth(req.body?.password))return res.status(401).json({error:'Wrong admin password'});const g=getGame(req.body?.key);if(!g)return res.status(404).json({error:'Game not found'});res.json({ok:true,word:g.word,guesses:g.guesses.length,guessHistory:g.guesses,attempts:g.attempts,solved:g.solved,exhausted:g.exhausted,hintUsed:!!g.hintUsed,hintIndex:g.hintIndex??null,message:g.message,reward:g.reward})});
 app.post('/api/admin/reset/:id',(req,res)=>{if(!ADMIN_PASSWORD)return res.status(503).json({error:'Admin password is not configured in Render'});if(!auth(req.body?.password))return res.status(401).json({error:'Wrong admin password'});const games=db(),g=getGame(req.params.id);if(!g)return res.status(404).json({error:'Game not found'});g.guesses=[];g.solved=false;g.exhausted=false;g.hintUsed=false;g.hintIndex=null;g.reaction='';games[g.id]=g;save(games);res.json({ok:true})});
+app.get('/api/result-card/:id.png',async(req,res)=>{try{const g=getGame(req.params.id);if(!g)return res.status(404).json({error:'Game not found'});if(!g.solved&&!g.exhausted)return res.status(400).json({error:'Finish the game before creating a result card'});const png=await sharp(Buffer.from(resultCardSvg(g))).png().toBuffer();res.set('Content-Type','image/png');res.set('Content-Disposition','inline; filename="date-wordle-result.png"');res.send(png)}catch(e){console.error('result-card',e);res.status(500).json({error:'Could not generate result image'})}});
 app.get('/health',(req,res)=>res.json({ok:true}));
 app.listen(PORT,()=>console.log('Date Wordle running on '+PORT));
