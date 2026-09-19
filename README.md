@@ -1,47 +1,135 @@
-# date-wordle
+# DATE WORDLE 🎯
 
-Single-round Wordle where anyone picks the secret word and sends the link. Whoever gets the link has to solve it. A small lock in the corner of the play page lets anyone with a passcode reveal that puzzle's word.
+A shareable Wordle-style game where you create a puzzle with your own secret word, send the link, and let someone else try to solve it.
 
-Built by [@chatpataprani](https://github.com/chatpataprani).
+Built by **@chatpataprani**.
 
-## How it works
+📸 Instagram: [@chatpataprani](https://www.instagram.com/chatpataprani/)
 
-- `/` — type a word, get a shareable link back
-- `/play/:id` — the person you send the link to solves it, Wordle-style (6 tries, on-screen + physical keyboard)
-- 🔒 bottom-right corner of the play page — tap it, type a passcode, it reveals that page's word inline. No separate panel, no login page.
+## ✨ Features
 
-Everything lives in one file, `server.js`. No `views/`, no `public/`, no template engine — all HTML/CSS/JS for every page is inline template strings served with `res.send()`. Word storage is a local `games.json` file, created automatically on first run — no database setup.
+- 🔗 Create a custom puzzle and share it with a unique link
+- 🧩 Wordle-style gameplay with visual feedback
+- 🎮 Solo mode
+- ⚡ Multiple difficulty modes: Normal, Hard, and Chill
+- 💡 Optional hints
+- ⏱ Optional speed timer
+- 😂 Optional reactions
+- 📊 Result history with guesses and letters used
+- 📤 Share results with a generated result card
+- 🇺🇸 **US, RANKED** — a separate multiplayer-style game available at `/ranked`
+- 🔐 Private creator/admin controls for managing a puzzle
 
-## Setup
+## 🎮 Games
+
+### DATE WORDLE
+
+Create a puzzle, choose your settings, and send the generated link to someone. They try to discover the secret word within the available attempts.
+
+### US, RANKED
+
+A separate game mode available at:
+
+`/ranked`
+
+It does not replace or modify the main DATE WORDLE experience.
+
+## 🛠️ Tech Stack
+
+- **Node.js**
+- **Express**
+- **HTML / CSS / JavaScript**
+- **Sharp** for generated result-card PNGs
+- **JSON file storage** for game data
+
+The project is intentionally lightweight. The main application logic lives in `server.js`, with no template engine or separate frontend framework.
+
+## 🚀 Run Locally
+
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/chatpataprani/date-wordle.git
+cd date-wordle
+```
+
+### 2. Install dependencies
 
 ```bash
 npm install
+```
+
+### 3. Start the server
+
+```bash
 npm start
 ```
 
-Runs on `http://localhost:3000` (or `$PORT`).
+The app runs on:
 
-## Config — do this before deploying anywhere public
+`http://localhost:3000`
 
-In `server.js`, `ADMIN_KEYS` is the list of valid reveal passcodes (`ADMIN_KEY_1`, `ADMIN_KEY_2` env vars by default — add more entries in the array for more passcodes). **Change the default values before deploying.**
+or the port provided through the `PORT` environment variable.
 
-Example (Render/VPS env vars):
+## ⚙️ Environment Variables
 
+For a public deployment, configure the required admin password through an environment variable:
+
+```env
+ADMIN_PASSWORD=your-secure-password
 ```
-ADMIN_KEY_1=your-real-passcode
-ADMIN_KEY_2=second-passcode
-```
 
-## Rules
+**Do not hard-code your real password in the source code or commit it to GitHub.**
 
-- Secret word: single word, A-Z only, 3–12 letters, no spaces.
-- 6 guess attempts, standard Wordle correct/present/absent logic (duplicate letters handled correctly).
-- Word is only revealed to the player on a win or after attempts run out — the server checks guesses, never ships the answer up front.
+## 📋 Word Rules
 
-## Known limitation
+- Secret words use A–Z characters.
+- Words must be between 3 and 12 letters.
+- Guess feedback follows standard Wordle-style correct/present/absent logic.
+- Duplicate letters are handled by the game logic.
+- The secret word is not sent to normal players before they finish the puzzle.
 
-This isn't a security-hardened app — it's a fun link to send someone. The word isn't encrypted at rest in `games.json`, and the admin passcode is the only real gate. Don't put anything sensitive in it.
+## 📤 Result Sharing
 
-## Deploy
+After completing a game, players can share their result. The app generates a PNG result card containing the relevant result information without exposing the secret word.
 
-Same as any Node app on Render: connect the repo, no build command needed, start command `npm start`.
+The result includes information such as:
+
+- Win/loss status
+- Number of attempts
+- Hint usage
+- Guessed words
+- Letters used
+- Wordle-style result grid
+- Game link
+
+## ☁️ Deployment
+
+The project can be deployed as a Node.js web service on platforms such as Render.
+
+Typical settings:
+
+- **Runtime:** Node
+- **Build command:** `npm install`
+- **Start command:** `npm start`
+
+Set your environment variables in the hosting platform before deploying.
+
+## ⚠️ Storage Note
+
+Game data is stored in `games.json`. This keeps the project simple and easy to run, but it is not a replacement for a persistent production database. Hosting environments with ephemeral filesystems may lose locally stored game data after certain restarts or redeployments.
+
+## 🔒 Security Note
+
+This is designed as a fun sharing game rather than a security-hardened production system. Do not use it to store sensitive information or confidential data.
+
+## 📱 Creator
+
+Made by **@chatpataprani**
+
+- Instagram: [@chatpataprani](https://www.instagram.com/chatpataprani/)
+- GitHub: [@chatpataprani](https://github.com/chatpataprani)
+
+---
+
+⭐ If you like the project, consider starring the repository on GitHub.
