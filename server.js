@@ -80,9 +80,16 @@ function resultCardSvg(g){
 }
 
 function home(){
-return `<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><title>DATE ME</title><style>${CSS}</style><body>
-<h1>DATE ME</h1><div class="tag">// make a word, send the link, watch them struggle 😭</div>
+return \`<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><title>DATE ME</title><style>\${CSS}
+.gameSelect{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:14px 0}.gameSelect button{background:#292931;color:#eee}.gameSelect button.active{background:#ff5d8f;color:#111}
+.gamePanel{display:none}.gamePanel.active{display:block}.codeInput{text-transform:uppercase;letter-spacing:.18em;text-align:center;font-weight:bold}
+</style><body>
+<h1>DATE ME</h1><div class="tag">// pick a game and start playing 😭</div>
 <div class="panel">
+<div class="gameSelect"><button id="dateTab" class="active" type="button">🎯 DATE WORDLE</button><button id="rankedTab" type="button">👫 US, RANKED</button></div>
+
+<div id="datePanel" class="gamePanel active">
+<div class="tag" style="margin-bottom:10px">// make a word, send the link, watch them struggle</div>
 <input id="name" placeholder="YOUR NAME" maxlength="32">
 <input id="word" placeholder="SECRET WORD · 3-12 LETTERS" maxlength="12" autocomplete="off">
 <button id="create" type="button">CREATE LINK</button>
@@ -99,10 +106,24 @@ return `<!doctype html><meta name="viewport" content="width=device-width,initial
 <label class="fieldLabel">AFTER THEY WIN</label>
 <input id="message" placeholder="💌 Secret message · optional" maxlength="220">
 <input id="reward" placeholder="🎁 Secret reward · optional" maxlength="220">
-</details><div id="out"></div></div>
-<div class="small" style="margin-top:12px">or <a href="/solo">PLAY ALONE 🎮</a></div>
+</details><div id="out"></div>
+</div>
+
+<div id="rankedPanel" class="gamePanel">
+<div class="tag" style="margin-bottom:10px">// answer who you think it is — then compare 😭</div>
+<input id="rankedName" placeholder="YOUR NAME" maxlength="32">
+<button id="rankedCreate" type="button">CREATE RANKED ROOM</button>
+<div class="small" style="margin:12px 0">or join your partner's room</div>
+<input id="rankedCode" class="codeInput" placeholder="ENTER ROOM CODE" maxlength="12" autocomplete="off">
+<button id="rankedJoin" type="button">JOIN WITH CODE</button>
+<div id="rankedOut" class="msg"></div>
+</div>
+</div>
+<div class="small" style="margin-top:12px"><a href="/solo">PLAY ALONE 🎮</a></div>
 <script>
-(()=>{const $=x=>document.getElementById(x),out=$('out'),btn=$('create');
+(()=>{const $=x=>document.getElementById(x),out=$('out'),btn=$('create'),rankedOut=$('rankedOut');
+function tab(which){const date=which==='date';$('datePanel').classList.toggle('active',date);$('rankedPanel').classList.toggle('active',!date);$('dateTab').classList.toggle('active',date);$('rankedTab').classList.toggle('active',!date)}
+$('dateTab').onclick=()=>tab('date');$('rankedTab').onclick=()=>tab('ranked');
 $('word').addEventListener('input',e=>e.target.value=e.target.value.replace(/[^a-z]/gi,'').toUpperCase());
 btn.addEventListener('click',async()=>{
  const name=$('name').value.trim(),word=$('word').value.trim().toUpperCase();
@@ -110,18 +131,29 @@ btn.addEventListener('click',async()=>{
  if(!/^[A-Z]{3,12}$/.test(word)){out.textContent='Secret word must be 3-12 letters.';return}
  btn.disabled=true;out.textContent='CREATING...';
  try{
-  const r=await fetch('/api/create',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
-   name,word,mode:$('mode').value,hintsEnabled:$('hints').checked,timerEnabled:$('timer').checked,
-   reactionsEnabled:$('reactions').checked,slug:$('slug').value,message:$('message').value,reward:$('reward').value
-  })});
+  const r=await fetch('/api/create',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,word,mode:$('mode').value,hintsEnabled:$('hints').checked,timerEnabled:$('timer').checked,reactionsEnabled:$('reactions').checked,slug:$('slug').value,message:$('message').value,reward:$('reward').value})});
   const d=await r.json();if(!r.ok)throw Error(d.error||'Could not create link');
   out.innerHTML='<div class="result"><b>💌 LINK CREATED</b><br><br><span id="linkText"></span><button id="copy" type="button">COPY LINK</button><a id="open" style="display:block;text-align:center;margin-top:10px">OPEN GAME 🎮</a></div>';
   $('linkText').textContent=d.link;$('open').href=d.link;
-  $('copy').onclick=async()=>{try{await navigator.clipboard.writeText(d.link);$('copy').textContent='COPIED ✓'}catch{out.querySelector('#copy').textContent='COPY FAILED'}};
+  $('copy').onclick=async()=>{try{await navigator.clipboard.writeText(d.link);$('copy').textContent='COPIED ✓'}catch{$('copy').textContent='COPY FAILED'}};
  }catch(e){out.textContent='❌ '+e.message}finally{btn.disabled=false}
 });
+async function rankedJoin(code,name){
+ const r=await fetch('/api/ranked/join',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code,name})});
+ const d=await r.json();if(!r.ok)throw Error(d.error||'Could not join room');return d;
+}
+$('rankedCreate').onclick=async()=>{
+ const name=$('rankedName').value.trim();if(!name){rankedOut.textContent='Enter your name.';return}
+ $('rankedCreate').disabled=true;rankedOut.textContent='CREATING ROOM...';
+ try{const r=await fetch('/api/ranked/room',{method:'POST'});const d=await r.json();if(!r.ok)throw Error(d.error||'Could not create room');const j=await rankedJoin(d.code,name);location.href='/ranked?room='+encodeURIComponent(d.code)+'&pid='+encodeURIComponent(j.pid)+'&name='+encodeURIComponent(name)}catch(e){rankedOut.textContent='❌ '+e.message}finally{$('rankedCreate').disabled=false}
+};
+$('rankedJoin').onclick=async()=>{
+ const name=$('rankedName').value.trim(),code=$('rankedCode').value.trim().toUpperCase();if(!name){rankedOut.textContent='Enter your name.';return}if(!/^[A-Z0-9]{6,12}$/.test(code)){rankedOut.textContent='Enter a valid room code.';return}
+ $('rankedJoin').disabled=true;rankedOut.textContent='JOINING...';
+ try{const j=await rankedJoin(code,name);location.href='/ranked?room='+encodeURIComponent(code)+'&pid='+encodeURIComponent(j.pid)+'&name='+encodeURIComponent(name)}catch(e){rankedOut.textContent='❌ '+e.message}finally{$('rankedJoin').disabled=false}
+};
 })();
-</script></body>`}
+</script></body>\`}
 
 function solo(){
 return `<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><title>PLAY ALONE</title><style>${CSS}</style><body>
@@ -232,24 +264,24 @@ function pickRankedPrompt(room){
 }
 
 app.post('/api/ranked/room',(req,res)=>{
- const code=id();
+ let code;
+ do{code=crypto.randomBytes(4).toString('hex').slice(0,6).toUpperCase()}while(rankedRooms[code]);
  rankedRooms[code]={players:{},order:[],history:[],current:null};
  res.json({code});
 });
 
 app.post('/api/ranked/join',(req,res)=>{
- const {code,name}=req.body;
+ const code=String(req.body?.code||'').trim().toUpperCase();
+ const name=clean(req.body?.name,32);
  const room=rankedRooms[code];
  if(!room) return res.status(404).json({error:'room not found'});
- if(room.order.length>=2 && !Object.values(room.players).includes(name)){
-  return res.status(403).json({error:'room full'});
- }
+ if(!name) return res.status(400).json({error:'name is required'});
+ if(room.order.length>=2) return res.status(403).json({error:'room full'});
+ if(room.order.some(pid=>room.players[pid]===name)) return res.status(409).json({error:'that name is already in the room'});
  const pid=id();
- room.players[pid]=name||'anon';
+ room.players[pid]=name;
  room.order.push(pid);
- if(!room.current && room.order.length>=1){
-  room.current={prompt:pickRankedPrompt(room),picks:{}};
- }
+ if(!room.current) room.current={prompt:pickRankedPrompt(room),picks:{}};
  res.json({pid,names:room.order.map(o=>room.players[o])});
 });
 
@@ -275,19 +307,27 @@ app.get('/api/ranked/state/:code',(req,res)=>{
 
 app.post('/api/ranked/pick',(req,res)=>{
  const {code,pid,choicePid}=req.body;
- const room=rankedRooms[code];
+ const room=rankedRooms[String(code||'').trim().toUpperCase()];
  if(!room||!room.current) return res.status(404).json({error:'no room/round'});
+ if(!room.players[pid]) return res.status(403).json({error:'invalid player'});
+ if(!room.players[choicePid]) return res.status(400).json({error:'invalid choice'});
+ if(room.order.length!==2) return res.status(400).json({error:'waiting for partner'});
+ if(room.current.picks[pid]) return res.status(400).json({error:'you already picked'});
  room.current.picks[pid]=choicePid;
- if(room.order.length===2 && room.order.every(o=>room.current.picks[o])){
-  room.history.unshift({prompt:room.current.prompt,picks:room.current.picks});
+ if(room.order.every(o=>room.current.picks[o]) && !room.current.recorded){
+  room.history.unshift({prompt:room.current.prompt,picks:{...room.current.picks}});
+  room.current.recorded=true;
  }
  res.json({ok:true});
 });
 
 app.post('/api/ranked/next',(req,res)=>{
- const {code}=req.body;
+ const code=String(req.body?.code||'').trim().toUpperCase();
  const room=rankedRooms[code];
  if(!room) return res.status(404).json({error:'room not found'});
+ if(room.order.length!==2 || !room.current || !room.order.every(o=>room.current.picks[o])) return res.status(400).json({error:'both players must pick first'});
+ if(room.current.nextStarted) return res.status(400).json({error:'next round already started'});
+ room.current.nextStarted=true;
  room.current={prompt:pickRankedPrompt(room),picks:{}};
  res.json({ok:true});
 });
@@ -328,8 +368,8 @@ input{width:100%;padding:12px;border-radius:10px;border:1px solid #34343f;backgr
 const app=document.getElementById('app');
 const params=new URLSearchParams(location.search);
 let code=params.get('room');
-let pid=localStorage.getItem('pid_'+code)||null;
-let myName=localStorage.getItem('name_'+code)||null;
+let pid=params.get('pid')||localStorage.getItem('pid_'+code)||null;
+let myName=params.get('name')||localStorage.getItem('name_'+code)||null;
 
 function screenJoin(){
  app.innerHTML='<div class="card"><input id="name" placeholder="your name"/>'+
@@ -364,21 +404,22 @@ async function poll(){
  setTimeout(poll,1800);
 }
 
+function safe(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function render(s){
  if(!s.ready){
-  app.innerHTML='<div class="card"><div class="linkbox">share this link: '+location.href+'</div>'+
+  app.innerHTML='<div class="card"><div class="linkbox"><b>ROOM CODE: '+safe(code)+'</b><br>Give this code to your partner.<br><small>'+safe(s.names.length)+'/2 players joined</small></div>'+
    '<div id="waiting">waiting for your partner to join…</div></div>';
   return;
  }
  let html='<div class="card">';
  if(s.current && !s.current.revealed){
-  html+='<div class="prompt">'+s.current.prompt+'</div><div class="choices">'+
-   s.roster.map(r=>'<button data-pid="'+r.pid+'" class="pickBtn">'+r.name+'</button>').join('')+
+  html+='<div class="prompt">'+safe(s.current.prompt)+'</div><div class="choices">'+
+   s.roster.map(r=>'<button data-pid="'+r.pid+'" class="pickBtn">'+safe(r.name)+'</button>').join('')+
    '</div>';
  } else if(s.current && s.current.revealed){
-  html+='<div class="prompt">'+s.current.prompt+'</div>';
+  html+='<div class="prompt">'+safe(s.current.prompt)+'</div>';
   s.current.picks.forEach(p=>{
-   html+='<div class="result"><span>'+p.name+' picked</span><b>'+p.chose+'</b></div>';
+   html+='<div class="result"><span>'+safe(p.name)+' picked</span><b>'+safe(p.chose)+'</b></div>';
   });
   const match=s.current.picks[0].chose===s.current.picks[1].chose;
   html+='<div style="margin:10px 0" class="'+(match?'match':'nomatch')+'">'+(match?'match! you\\'re in sync':'no match — talk about it')+'</div>';
@@ -388,15 +429,17 @@ function render(s){
  if(s.history.length){
   html+='<div class="card"><div class="sub" style="margin-bottom:10px">history</div>';
   s.history.forEach(h=>{
-   html+='<div class="hist-item"><div class="hist-prompt">'+h.prompt+'</div><div class="hist-picks">'+
-    h.picks.map(p=>p.name+' → '+p.chose).join(' · ')+' '+(h.match?'<span class="match">match</span>':'')+
+   html+='<div class="hist-item"><div class="hist-prompt">'+safe(h.prompt)+'</div><div class="hist-picks">'+
+    h.picks.map(p=>safe(p.name)+' → '+safe(p.chose)).join(' · ')+' '+(h.match?'<span class="match">match</span>':'')+
     '</div></div>';
   });
   html+='</div>';
  }
  app.innerHTML=html;
  document.querySelectorAll('.pickBtn').forEach(b=>b.onclick=async()=>{
-  await fetch('/api/ranked/pick',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code,pid,choicePid:b.dataset.pid})});
+  document.querySelectorAll('.pickBtn').forEach(x=>x.disabled=true);
+  const r=await fetch('/api/ranked/pick',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code,pid,choicePid:b.dataset.pid})});
+  if(!r.ok){const d=await r.json().catch(()=>({}));alert(d.error||'Pick failed')}
  });
  const nb=document.getElementById('nextBtn');
  if(nb) nb.onclick=async()=>{await fetch('/api/ranked/next',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code})})};
