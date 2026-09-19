@@ -80,81 +80,94 @@ function resultCardSvg(g){
 }
 
 function home(){
-return `<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><title>DATE ME</title><style>\${CSS}
-.gameSelect{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:14px 0}.gameSelect button{background:#292931;color:#eee}.gameSelect button.active{background:#ff5d8f;color:#111}
-.gamePanel{display:none}.gamePanel.active{display:block}.codeInput{text-transform:uppercase;letter-spacing:.18em;text-align:center;font-weight:bold}
-</style><body>
-<h1>DATE ME</h1><div class="tag">// pick a game and start playing 😭</div>
-<div class="panel">
-<div class="gameSelect"><button id="dateTab" class="active" type="button">🎯 DATE WORDLE</button><button id="rankedTab" type="button">👫 US, RANKED</button></div>
-
+return `<!doctype html>
+<html><head><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#0b0b10"><title>DATE WORDLE</title><style>
+${CSS}
+:root{--pink:#ff5d8f;--purple:#a78bfa;--bg:#0b0b10;--panel:#13131a;--panel2:#181821;--line:#292936;--muted:#858594}
+body{background:radial-gradient(circle at 50% -10%,#241522 0,#0b0b10 38%),var(--bg);padding:0 14px 40px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.home{width:min(100%,760px);margin:0 auto;padding-top:34px}
+.hero{text-align:center;padding:18px 8px 24px}
+.logo{display:inline-flex;align-items:center;gap:9px;padding:7px 11px;border:1px solid #353541;border-radius:999px;background:#111118;color:#aaa;font-size:.68rem;letter-spacing:.16em}
+.hero h1{font-family:system-ui,sans-serif;font-size:clamp(2.2rem,10vw,4.4rem);line-height:.95;letter-spacing:-.07em;margin:18px 0 10px;background:linear-gradient(100deg,#fff 35%,#ff7ca4 65%,#b69cff);-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero p{margin:0 auto;color:#92929f;font-family:system-ui,sans-serif;font-size:.95rem;max-width:500px;line-height:1.5}
+.shell{background:rgba(19,19,26,.92);border:1px solid #292936;border-radius:24px;box-shadow:0 24px 80px #0008;overflow:hidden}
+.tabs{display:grid;grid-template-columns:1fr 1fr;padding:7px;background:#0f0f15;border-bottom:1px solid #292936}
+.tabs button{margin:0;padding:13px 8px;border-radius:15px;background:transparent;color:#777;font-size:.76rem}
+.tabs button.active{background:#fff;color:#111;box-shadow:0 4px 18px #0006}
+.panelInner{padding:24px}
+.gamePanel{display:none}.gamePanel.active{display:block}
+.kicker{color:#6f6f7d;font-size:.67rem;letter-spacing:.12em;margin-bottom:17px}
+.sectionTitle{font-family:system-ui,sans-serif;font-size:1.45rem;font-weight:800;letter-spacing:-.03em;margin-bottom:5px}
+.sectionSub{font-family:system-ui,sans-serif;color:#858594;font-size:.84rem;margin-bottom:20px}
+.field{margin:12px 0}.field label{display:block;color:#8c8c99;font-size:.65rem;font-weight:bold;letter-spacing:.1em;margin:0 0 7px}
+.field input,.field select{margin:0;background:#0d0d13;border-color:#30303c;border-radius:12px;height:50px}
+.primary{width:100%;height:50px;border-radius:12px;margin-top:8px;background:linear-gradient(135deg,#ff5d8f,#ff769f);box-shadow:0 10px 28px #ff5d8f24}
+.primary:hover{filter:brightness(1.05)}
+.extras{margin-top:15px;background:#0e0e14;border:1px solid #292936;border-radius:15px;padding:0 14px}
+.extras summary{padding:14px 0;color:#d8d8df;font-size:.72rem;letter-spacing:.04em}
+.extras summary:after{content:'+'}.extras[open] summary:after{content:'−'}
+.optionGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:4px 0 14px}
+.option{min-width:0;display:flex;align-items:flex-start;gap:8px;padding:12px;border:1px solid #292936;border-radius:11px;background:#16161e}
+.option input{width:17px;height:17px;min-height:0;margin:1px 0 0;accent-color:var(--pink)}
+.option b{font-size:.69rem}.option small{display:block;color:#70707d;font-size:.59rem;margin-top:3px;line-height:1.3}
+.fieldLabel{display:block;color:#777;font-size:.63rem;letter-spacing:.08em;margin:10px 0 5px}
+.codeInput{text-align:center;text-transform:uppercase;letter-spacing:.2em;font-weight:800}
+.rankHero{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:16px;border:1px solid #302d42;background:linear-gradient(135deg,#181521,#12121a);border-radius:16px;margin-bottom:16px}
+.rankIcon{font-size:1.7rem}.rankHero b{font-family:system-ui,sans-serif;font-size:1rem}.rankHero span{display:block;color:#858594;font-size:.68rem;margin-top:3px}
+.divider{display:flex;align-items:center;gap:10px;color:#666;font-size:.62rem;margin:17px 0}.divider:before,.divider:after{content:'';height:1px;background:#292936;flex:1}
+.result{margin-top:15px;padding:16px;border-radius:15px;background:#101018;border-color:#353543}
+.resultTitle{font-family:system-ui,sans-serif;font-size:1rem}
+.resultLink{display:block;margin:10px 0;padding:11px;border-radius:10px;background:#0a0a0f;color:#ff8aad;font-size:.68rem;word-break:break-all}
+.resultActions{display:grid;grid-template-columns:1fr 1fr;gap:8px}.resultActions button{margin:0;background:#292934;color:#fff}.resultActions a{display:flex;align-items:center;justify-content:center;border-radius:8px;background:#ff5d8f;color:#111;font-weight:bold;font-size:.72rem;text-decoration:none}
+.notice{font-size:.7rem;color:#888;text-align:center;min-height:18px;margin-top:10px}
+.footer{display:flex;justify-content:center;gap:15px;margin-top:17px;font-size:.68rem;color:#686875}.footer a{color:#a8a8b4}.footer a:hover{color:#ff7ca4}
+@media(max-width:560px){.home{padding-top:20px}.panelInner{padding:18px}.hero{padding-bottom:20px}.optionGrid{grid-template-columns:1fr}.tabs button{font-size:.68rem}.shell{border-radius:19px}}
+</style></head><body>
+<main class="home">
+<section class="hero"><div class="logo">✦ CHAT WITH A LITTLE CHAOS</div><h1>DATE WORDLE</h1><p>Make a secret word. Send the game. Let them prove they know you. 😭</p></section>
+<section class="shell">
+<nav class="tabs"><button id="dateTab" class="active" type="button">🎯 DATE WORDLE</button><button id="rankedTab" type="button">👫 US, RANKED</button></nav>
+<div class="panelInner">
 <div id="datePanel" class="gamePanel active">
-<div class="tag" style="margin-bottom:10px">// make a word, send the link, watch them struggle</div>
-<input id="name" placeholder="YOUR NAME" maxlength="32">
-<input id="word" placeholder="SECRET WORD · 3-12 LETTERS" maxlength="12" autocomplete="off">
-<button id="create" type="button">CREATE LINK</button>
-<details class="extras"><summary>✨ OPTIONAL EXTRAS</summary>
+<div class="kicker">// CREATE A PRIVATE PUZZLE</div><div class="sectionTitle">Give them a word to guess.</div><div class="sectionSub">You choose the word. They get the challenge.</div>
+<div class="field"><label>YOUR NAME</label><input id="name" placeholder="e.g. Alex" maxlength="32" autocomplete="name"></div>
+<div class="field"><label>SECRET WORD</label><input id="word" placeholder="3–12 LETTERS" maxlength="12" autocomplete="off"></div>
+<button id="create" class="primary" type="button">CREATE GAME ↗</button>
+<details class="extras"><summary>OPTIONAL EXTRAS</summary>
 <div class="optionGrid">
-<label class="option"><input id="hints" type="checkbox"><span><b>💡 Hints</b><small>Costs 1 try</small></span></label>
-<label class="option"><input id="timer" type="checkbox"><span><b>⏱ Speed timer</b><small>Shows a clock</small></span></label>
-<label class="option"><input id="reactions" type="checkbox"><span><b>😂 Reactions</b><small>Let them react</small></span></label>
+<label class="option"><input id="hints" type="checkbox"><span><b>💡 Hints</b><small>One position revealed · costs 1 try</small></span></label>
+<label class="option"><input id="timer" type="checkbox"><span><b>⏱ Timer</b><small>Show how fast they solve it</small></span></label>
+<label class="option"><input id="reactions" type="checkbox"><span><b>😂 Reactions</b><small>Let them react mid-game</small></span></label>
 </div>
-<label class="fieldLabel">DIFFICULTY</label>
-<select id="mode"><option value="normal">Normal · 5 tries</option><option value="hard">Hard · 3 tries</option><option value="chill">Chill · 7 tries</option></select>
-<label class="fieldLabel">CUSTOM LINK</label>
-<input id="slug" placeholder="optional · e.g. date-me-123" maxlength="24">
-<label class="fieldLabel">AFTER THEY WIN</label>
-<input id="message" placeholder="💌 Secret message · optional" maxlength="220">
-<input id="reward" placeholder="🎁 Secret reward · optional" maxlength="220">
+<label class="fieldLabel">DIFFICULTY</label><select id="mode"><option value="normal">Normal · 5 tries</option><option value="hard">Hard · 3 tries</option><option value="chill">Chill · 7 tries</option></select>
+<label class="fieldLabel">CUSTOM LINK</label><input id="slug" placeholder="optional · date-with-me" maxlength="24">
+<label class="fieldLabel">AFTER THEY WIN</label><input id="message" placeholder="💌 Secret message · optional" maxlength="220"><input id="reward" placeholder="🎁 Secret reward · optional" maxlength="220">
 </details><div id="out"></div>
 </div>
-
 <div id="rankedPanel" class="gamePanel">
-<div class="tag" style="margin-bottom:10px">// answer who you think it is — then compare 😭</div>
-<input id="rankedName" placeholder="YOUR NAME" maxlength="32">
-<button id="rankedCreate" type="button">CREATE RANKED ROOM</button>
-<div class="small" style="margin:12px 0">or join your partner's room</div>
-<input id="rankedCode" class="codeInput" placeholder="ENTER ROOM CODE" maxlength="12" autocomplete="off">
-<button id="rankedJoin" type="button">JOIN WITH CODE</button>
-<div id="rankedOut" class="msg"></div>
+<div class="kicker">// TWO PEOPLE · ONE VERDICT</div>
+<div class="rankHero"><div><b>US, RANKED</b><span>Pick each other. See if you're actually in sync.</span></div><div class="rankIcon">⚡</div></div>
+<div class="field"><label>YOUR NAME</label><input id="rankedName" placeholder="e.g. Alex" maxlength="32" autocomplete="name"></div>
+<button id="rankedCreate" class="primary" type="button">CREATE ROOM ↗</button>
+<div class="divider">OR JOIN A ROOM</div>
+<div class="field"><label>ROOM CODE</label><input id="rankedCode" class="codeInput" placeholder="ABC123" maxlength="12" autocomplete="off"></div>
+<button id="rankedJoin" class="primary" type="button">JOIN ROOM →</button><div id="rankedOut" class="notice"></div>
 </div>
-</div>
-<div class="small" style="margin-top:12px"><a href="/solo">PLAY ALONE 🎮</a></div>
+</div></section>
+<div class="footer"><a href="/solo">PLAY SOLO 🎮</a><span>·</span><span>DATE WORDLE</span></div>
+</main>
 <script>
 (()=>{const $=x=>document.getElementById(x),out=$('out'),btn=$('create'),rankedOut=$('rankedOut');
 function tab(which){const date=which==='date';$('datePanel').classList.toggle('active',date);$('rankedPanel').classList.toggle('active',!date);$('dateTab').classList.toggle('active',date);$('rankedTab').classList.toggle('active',!date)}
 $('dateTab').onclick=()=>tab('date');$('rankedTab').onclick=()=>tab('ranked');
 $('word').addEventListener('input',e=>e.target.value=e.target.value.replace(/[^a-z]/gi,'').toUpperCase());
-btn.addEventListener('click',async()=>{
- const name=$('name').value.trim(),word=$('word').value.trim().toUpperCase();
- if(!name){out.textContent='Enter your name.';return}
- if(!/^[A-Z]{3,12}$/.test(word)){out.textContent='Secret word must be 3-12 letters.';return}
- btn.disabled=true;out.textContent='CREATING...';
- try{
-  const r=await fetch('/api/create',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,word,mode:$('mode').value,hintsEnabled:$('hints').checked,timerEnabled:$('timer').checked,reactionsEnabled:$('reactions').checked,slug:$('slug').value,message:$('message').value,reward:$('reward').value})});
-  const d=await r.json();if(!r.ok)throw Error(d.error||'Could not create link');
-  out.innerHTML='<div class="result"><b>💌 LINK CREATED</b><br><br><span id="linkText"></span><button id="copy" type="button">COPY LINK</button><a id="open" style="display:block;text-align:center;margin-top:10px">OPEN GAME 🎮</a></div>';
-  $('linkText').textContent=d.link;$('open').href=d.link;
-  $('copy').onclick=async()=>{try{await navigator.clipboard.writeText(d.link);$('copy').textContent='COPIED ✓'}catch{$('copy').textContent='COPY FAILED'}};
- }catch(e){out.textContent='❌ '+e.message}finally{btn.disabled=false}
-});
-async function rankedJoin(code,name){
- const r=await fetch('/api/ranked/join',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code,name})});
- const d=await r.json();if(!r.ok)throw Error(d.error||'Could not join room');return d;
-}
-$('rankedCreate').onclick=async()=>{
- const name=$('rankedName').value.trim();if(!name){rankedOut.textContent='Enter your name.';return}
- $('rankedCreate').disabled=true;rankedOut.textContent='CREATING ROOM...';
- try{const r=await fetch('/api/ranked/room',{method:'POST'});const d=await r.json();if(!r.ok)throw Error(d.error||'Could not create room');const j=await rankedJoin(d.code,name);location.href='/ranked?room='+encodeURIComponent(d.code)+'&pid='+encodeURIComponent(j.pid)+'&name='+encodeURIComponent(name)}catch(e){rankedOut.textContent='❌ '+e.message}finally{$('rankedCreate').disabled=false}
-};
-$('rankedJoin').onclick=async()=>{
- const name=$('rankedName').value.trim(),code=$('rankedCode').value.trim().toUpperCase();if(!name){rankedOut.textContent='Enter your name.';return}if(!/^[A-Z0-9]{6,12}$/.test(code)){rankedOut.textContent='Enter a valid room code.';return}
- $('rankedJoin').disabled=true;rankedOut.textContent='JOINING...';
- try{const j=await rankedJoin(code,name);location.href='/ranked?room='+encodeURIComponent(code)+'&pid='+encodeURIComponent(j.pid)+'&name='+encodeURIComponent(name)}catch(e){rankedOut.textContent='❌ '+e.message}finally{$('rankedJoin').disabled=false}
-};
+$('rankedCode').addEventListener('input',e=>e.target.value=e.target.value.replace(/[^a-z0-9]/gi,'').toUpperCase());
+btn.addEventListener('click',async()=>{const name=$('name').value.trim(),word=$('word').value.trim().toUpperCase();if(!name){out.innerHTML='<div class="notice">Enter your name first.</div>';return}if(!/^[A-Z]{3,12}$/.test(word)){out.innerHTML='<div class="notice">Your secret word needs 3–12 letters.</div>';return}btn.disabled=true;out.innerHTML='<div class="notice">BUILDING YOUR GAME…</div>';try{const r=await fetch('/api/create',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,word,mode:$('mode').value,hintsEnabled:$('hints').checked,timerEnabled:$('timer').checked,reactionsEnabled:$('reactions').checked,slug:$('slug').value,message:$('message').value,reward:$('reward').value})});const d=await r.json();if(!r.ok)throw Error(d.error||'Could not create game');out.innerHTML='<div class="result"><div class="resultTitle">💌 Your game is ready.</div><div class="resultLink" id="linkText"></div><div class="resultActions"><button id="copy" type="button">COPY LINK</button><a id="open" target="_blank" rel="noopener">PLAY ↗</a></div></div>';$('linkText').textContent=d.link;$('open').href=d.link;$('copy').onclick=async()=>{try{await navigator.clipboard.writeText(d.link);$('copy').textContent='COPIED ✓'}catch{$('copy').textContent='COPY FAILED'}}}catch(e){out.innerHTML='<div class="notice">❌ '+e.message+'</div>'}finally{btn.disabled=false}});
+async function rankedJoin(code,name){const r=await fetch('/api/ranked/join',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code,name})});const d=await r.json();if(!r.ok)throw Error(d.error||'Could not join room');return d}
+$('rankedCreate').onclick=async()=>{const name=$('rankedName').value.trim();if(!name){rankedOut.textContent='Enter your name first.';return}$('rankedCreate').disabled=true;rankedOut.textContent='CREATING ROOM…';try{const r=await fetch('/api/ranked/room',{method:'POST'});const d=await r.json();if(!r.ok)throw Error(d.error||'Could not create room');const j=await rankedJoin(d.code,name);location.href='/ranked?room='+encodeURIComponent(d.code)+'&pid='+encodeURIComponent(j.pid)+'&name='+encodeURIComponent(name)}catch(e){rankedOut.textContent='❌ '+e.message}finally{$('rankedCreate').disabled=false}};
+$('rankedJoin').onclick=async()=>{const name=$('rankedName').value.trim(),code=$('rankedCode').value.trim().toUpperCase();if(!name){rankedOut.textContent='Enter your name first.';return}if(!/^[A-Z0-9]{6,12}$/.test(code)){rankedOut.textContent='Enter a valid room code.';return}$('rankedJoin').disabled=true;rankedOut.textContent='JOINING…';try{const j=await rankedJoin(code,name);location.href='/ranked?room='+encodeURIComponent(code)+'&pid='+encodeURIComponent(j.pid)+'&name='+encodeURIComponent(name)}catch(e){rankedOut.textContent='❌ '+e.message}finally{$('rankedJoin').disabled=false}};
 })();
-</script></body>`}
-
+</script></body></html>`}
 function solo(){
 return `<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><title>PLAY ALONE</title><style>${CSS}</style><body>
 <h1>PLAY ALONE</h1><div class="tag">// choose your difficulty 🎮</div><div class="panel">
