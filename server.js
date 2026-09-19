@@ -199,4 +199,213 @@ app.post('/api/admin/reveal',(req,res)=>{if(!ADMIN_PASSWORD)return res.status(50
 app.post('/api/admin/reset/:id',(req,res)=>{if(!ADMIN_PASSWORD)return res.status(503).json({error:'Admin password is not configured in Render'});if(!auth(req.body?.password))return res.status(401).json({error:'Wrong admin password'});const games=db(),g=getGame(req.params.id);if(!g)return res.status(404).json({error:'Game not found'});g.guesses=[];g.solved=false;g.exhausted=false;g.hintUsed=false;g.hintIndex=null;g.reaction='';games[g.id]=g;save(games);res.json({ok:true})});
 app.get('/api/result-card/:id.png',async(req,res)=>{try{const g=getGame(req.params.id);if(!g)return res.status(404).json({error:'Game not found'});if(!g.solved&&!g.exhausted)return res.status(400).json({error:'Finish the game before creating a result card'});const png=await sharp(Buffer.from(resultCardSvg(g))).png().toBuffer();res.set('Content-Type','image/png');res.set('Content-Disposition','inline; filename="date-wordle-result.png"');res.send(png)}catch(e){console.error('result-card',e);res.status(500).json({error:'Could not generate result image'})}});
 app.get('/health',(req,res)=>res.json({ok:true}));
+
+// ===== US, RANKED — added as a separate game, does not touch anything above =====
+const RANKED_PROMPTS=[
+ "Who's more likely to cry at a movie",
+ "Who'd survive longer in a zombie apocalypse",
+ "Who takes longer to get ready",
+ "Who's more likely to forget an anniversary",
+ "Who'd win in a cooking battle",
+ "Who's the better liar",
+ "Who's more likely to cry over a pet video",
+ "Who'd last longer without their phone",
+ "Who's more stubborn",
+ "Who's more likely to start a business on a whim",
+ "Who's the better driver",
+ "Who'd panic first in an emergency",
+ "Who's more likely to fall asleep during a movie",
+ "Who's the bigger overthinker",
+ "Who'd win an argument with a stranger",
+ "Who's more likely to cry laughing",
+ "Who's the messier one",
+ "Who'd adapt better to living abroad",
+ "Who's more likely to ghost a group chat",
+ "Who gives better advice"
+];
+const rankedRooms={};
+function pickRankedPrompt(room){
+ const used=room.history.map(h=>h.prompt);
+ const pool=RANKED_PROMPTS.filter(p=>!used.includes(p));
+ const list=pool.length?pool:RANKED_PROMPTS;
+ return list[Math.floor(Math.random()*list.length)];
+}
+
+app.post('/api/ranked/room',(req,res)=>{
+ const code=id();
+ rankedRooms[code]={players:{},order:[],history:[],current:null};
+ res.json({code});
+});
+
+app.post('/api/ranked/join',(req,res)=>{
+ const {code,name}=req.body;
+ const room=rankedRooms[code];
+ if(!room) return res.status(404).json({error:'room not found'});
+ if(room.order.length>=2 && !Object.values(room.players).includes(name)){
+  return res.status(403).json({error:'room full'});
+ }
+ const pid=id();
+ room.players[pid]=name||'anon';
+ room.order.push(pid);
+ if(!room.current && room.order.length>=1){
+  room.current={prompt:pickRankedPrompt(room),picks:{}};
+ }
+ res.json({pid,names:room.order.map(o=>room.players[o])});
+});
+
+app.get('/api/ranked/state/:code',(req,res)=>{
+ const room=rankedRooms[req.params.code];
+ if(!room) return res.status(404).json({error:'room not found'});
+ const names=room.order.map(o=>room.players[o]);
+ const bothPicked=room.current && room.order.length===2 && room.order.every(o=>room.current.picks[o]);
+ res.json({
+  names,
+  roster:room.order.map(o=>({pid:o,name:room.players[o]})),
+  ready:room.order.length===2,
+  current:room.current?{prompt:room.current.prompt,revealed:bothPicked,
+   picks: bothPicked ? room.order.map(o=>({name:room.players[o],chose:room.players[room.current.picks[o]]})) : {mine:null}
+  }:null,
+  history:room.history.map(h=>({
+   prompt:h.prompt,
+   picks:room.order.map(o=>({name:room.players[o],chose:room.players[h.picks[o]]})),
+   match:room.order.every(o=>h.picks[o]===h.picks[room.order[0]])
+  }))
+ });
+});
+
+app.post('/api/ranked/pick',(req,res)=>{
+ const {code,pid,choicePid}=req.body;
+ const room=rankedRooms[code];
+ if(!room||!room.current) return res.status(404).json({error:'no room/round'});
+ room.current.picks[pid]=choicePid;
+ if(room.order.length===2 && room.order.every(o=>room.current.picks[o])){
+  room.history.unshift({prompt:room.current.prompt,picks:room.current.picks});
+ }
+ res.json({ok:true});
+});
+
+app.post('/api/ranked/next',(req,res)=>{
+ const {code}=req.body;
+ const room=rankedRooms[code];
+ if(!room) return res.status(404).json({error:'room not found'});
+ room.current={prompt:pickRankedPrompt(room),picks:{}};
+ res.json({ok:true});
+});
+
+app.get('/ranked',(req,res)=>{
+ res.send(`<!doctype html><html><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>US, RANKED</title>
+<style>
+:root{color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:#0e0e12;color:#eee;font-family:system-ui,sans-serif;display:flex;justify-content:center;padding:24px 12px}
+.wrap{width:100%;max-width:420px}
+h1{font-size:1.3rem;letter-spacing:1px;margin:0 0 4px}
+.sub{color:#888;font-size:.85rem;margin-bottom:20px}
+.card{background:#17171d;border:1px solid #34343f;border-radius:14px;padding:18px;margin-bottom:14px}
+button{background:#ff5d8f;color:#0e0e12;border:0;border-radius:10px;padding:12px 16px;font-weight:bold;font-size:.95rem;cursor:pointer;width:100%}
+button.secondary{background:#26262f;color:#eee}
+input{width:100%;padding:12px;border-radius:10px;border:1px solid #34343f;background:#0e0e12;color:#eee;margin-bottom:10px;font-size:.95rem}
+.prompt{font-size:1.1rem;margin-bottom:16px;font-weight:bold}
+.choices{display:flex;gap:10px}
+.choices button{flex:1}
+.picked{opacity:.5}
+.result{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #26262f;font-size:.9rem}
+.match{color:#4caf6d;font-weight:bold}
+.nomatch{color:#c9a227}
+.hist-item{padding:10px 0;border-bottom:1px solid #26262f}
+.hist-prompt{font-size:.85rem;color:#bbb;margin-bottom:4px}
+.hist-picks{font-size:.8rem;color:#888}
+.linkbox{word-break:break-all;background:#0e0e12;padding:10px;border-radius:8px;font-size:.8rem;color:#ff5d8f;margin-bottom:10px}
+#waiting{color:#888;font-size:.85rem;text-align:center;padding:20px 0}
+</style></head><body><div class="wrap">
+<h1>US, RANKED</h1>
+<div class="sub">no score, no losers, just verdicts</div>
+<div id="app"></div>
+</div>
+<script>
+const app=document.getElementById('app');
+const params=new URLSearchParams(location.search);
+let code=params.get('room');
+let pid=localStorage.getItem('pid_'+code)||null;
+let myName=localStorage.getItem('name_'+code)||null;
+
+function screenJoin(){
+ app.innerHTML='<div class="card"><input id="name" placeholder="your name"/>'+
+  (code?'<button id="joinBtn">join room</button>':'<button id="createBtn">start a room</button>')+
+  '</div>';
+ if(code) document.getElementById('joinBtn').onclick=doJoin;
+ else document.getElementById('createBtn').onclick=doCreate;
+}
+
+async function doCreate(){
+ const r=await fetch('/api/ranked/room',{method:'POST'}).then(r=>r.json());
+ code=r.code;
+ history.replaceState(null,'',location.pathname+'?room='+code);
+ doJoin();
+}
+
+async function doJoin(){
+ const name=document.getElementById('name').value.trim();
+ if(!name){alert('enter a name');return}
+ myName=name;
+ const r=await fetch('/api/ranked/join',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code,name})}).then(r=>r.json());
+ if(r.error){alert(r.error);return}
+ pid=r.pid;
+ localStorage.setItem('pid_'+code,pid);
+ localStorage.setItem('name_'+code,myName);
+ poll();
+}
+
+async function poll(){
+ const s=await fetch('/api/ranked/state/'+code).then(r=>r.json());
+ render(s);
+ setTimeout(poll,1800);
+}
+
+function render(s){
+ if(!s.ready){
+  app.innerHTML='<div class="card"><div class="linkbox">share this link: '+location.href+'</div>'+
+   '<div id="waiting">waiting for your partner to join…</div></div>';
+  return;
+ }
+ let html='<div class="card">';
+ if(s.current && !s.current.revealed){
+  html+='<div class="prompt">'+s.current.prompt+'</div><div class="choices">'+
+   s.roster.map(r=>'<button data-pid="'+r.pid+'" class="pickBtn">'+r.name+'</button>').join('')+
+   '</div>';
+ } else if(s.current && s.current.revealed){
+  html+='<div class="prompt">'+s.current.prompt+'</div>';
+  s.current.picks.forEach(p=>{
+   html+='<div class="result"><span>'+p.name+' picked</span><b>'+p.chose+'</b></div>';
+  });
+  const match=s.current.picks[0].chose===s.current.picks[1].chose;
+  html+='<div style="margin:10px 0" class="'+(match?'match':'nomatch')+'">'+(match?'match! you\\'re in sync':'no match — talk about it')+'</div>';
+  html+='<button id="nextBtn">next question</button>';
+ }
+ html+='</div>';
+ if(s.history.length){
+  html+='<div class="card"><div class="sub" style="margin-bottom:10px">history</div>';
+  s.history.forEach(h=>{
+   html+='<div class="hist-item"><div class="hist-prompt">'+h.prompt+'</div><div class="hist-picks">'+
+    h.picks.map(p=>p.name+' → '+p.chose).join(' · ')+' '+(h.match?'<span class="match">match</span>':'')+
+    '</div></div>';
+  });
+  html+='</div>';
+ }
+ app.innerHTML=html;
+ document.querySelectorAll('.pickBtn').forEach(b=>b.onclick=async()=>{
+  await fetch('/api/ranked/pick',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code,pid,choicePid:b.dataset.pid})});
+ });
+ const nb=document.getElementById('nextBtn');
+ if(nb) nb.onclick=async()=>{await fetch('/api/ranked/next',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code})})};
+}
+
+if(code && pid) poll();
+else screenJoin();
+</script></body></html>`);
+});
+// ===== end US, RANKED =====
+
 app.listen(PORT,()=>console.log('Date Wordle running on '+PORT));
