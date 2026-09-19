@@ -80,7 +80,7 @@ function resultCardSvg(g){
 }
 
 function home(){
-return \`<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><title>DATE ME</title><style>\${CSS}
+return `<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><title>DATE ME</title><style>\${CSS}
 .gameSelect{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:14px 0}.gameSelect button{background:#292931;color:#eee}.gameSelect button.active{background:#ff5d8f;color:#111}
 .gamePanel{display:none}.gamePanel.active{display:block}.codeInput{text-transform:uppercase;letter-spacing:.18em;text-align:center;font-weight:bold}
 </style><body>
@@ -153,7 +153,7 @@ $('rankedJoin').onclick=async()=>{
  try{const j=await rankedJoin(code,name);location.href='/ranked?room='+encodeURIComponent(code)+'&pid='+encodeURIComponent(j.pid)+'&name='+encodeURIComponent(name)}catch(e){rankedOut.textContent='❌ '+e.message}finally{$('rankedJoin').disabled=false}
 };
 })();
-</script></body>\`}
+</script></body>`}
 
 function solo(){
 return `<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><title>PLAY ALONE</title><style>${CSS}</style><body>
