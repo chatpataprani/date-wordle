@@ -154,7 +154,7 @@ body{background:radial-gradient(circle at 50% -10%,#241522 0,#0b0b10 38%),var(--
 <button id="rankedJoin" class="primary" type="button">JOIN ROOM →</button><div id="rankedOut" class="notice"></div>
 </div>
 </div></section>
-<div class="footer"><a href="/solo">PLAY SOLO 🎮</a><span>·</span><span>DATE WORDLE</span></div>
+<div class="footer"><a href="/solo">PLAY SOLO 🎮</a><span>·</span><span>PRIVATE LINKS</span><span>·</span><span>NO SIGN-UP</span></div>
 </main>
 <script>
 (()=>{const $=x=>document.getElementById(x),out=$('out'),btn=$('create'),rankedOut=$('rankedOut');
@@ -370,8 +370,11 @@ input{width:100%;padding:12px;border-radius:10px;border:1px solid #34343f;backgr
 .hist-item{padding:10px 0;border-bottom:1px solid #26262f}
 .hist-prompt{font-size:.85rem;color:#bbb;margin-bottom:4px}
 .hist-picks{font-size:.8rem;color:#888}
-.linkbox{word-break:break-all;background:#0e0e12;padding:10px;border-radius:8px;font-size:.8rem;color:#ff5d8f;margin-bottom:10px}
+.linkbox{background:#0e0e12;padding:14px;border-radius:12px;font-size:.8rem;color:#ff5d8f;margin-bottom:10px;text-align:center}
+.roomCode{font-size:1.55rem;letter-spacing:.2em;font-weight:900;color:#fff;margin:6px 0 12px}
+.roomActions{display:grid;grid-template-columns:1fr 1fr;gap:8px}.roomActions button{font-size:.78rem;padding:10px}
 #waiting{color:#888;font-size:.85rem;text-align:center;padding:20px 0}
+
 </style></head><body><div class="wrap">
 <h1>US, RANKED</h1>
 <div class="sub">no score, no losers, just verdicts</div>
@@ -420,8 +423,11 @@ async function poll(){
 function safe(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function render(s){
  if(!s.ready){
-  app.innerHTML='<div class="card"><div class="linkbox"><b>ROOM CODE: '+safe(code)+'</b><br>Give this code to your partner.<br><small>'+safe(s.names.length)+'/2 players joined</small></div>'+
+  app.innerHTML='<div class="card"><div class="linkbox"><div class="sub" style="margin:0">ROOM CODE</div><div class="roomCode">'+safe(code)+'</div><div>'+safe(s.names.length)+'/2 players joined</div><div class="roomActions"><button id="copyCode" class="secondary">COPY CODE</button><button id="shareRoom" class="secondary">SHARE ROOM</button></div></div>'+
    '<div id="waiting">waiting for your partner to join…</div></div>';
+  document.getElementById('copyCode').onclick=async()=>{try{await navigator.clipboard.writeText(code);document.getElementById('copyCode').textContent='COPIED ✓'}catch{document.getElementById('copyCode').textContent='COPY FAILED'}};
+  document.getElementById('shareRoom').onclick=async()=>{const text='Join my US, RANKED room on DATE WORDLE. Room code: '+code;try{if(navigator.share){await navigator.share({title:'US, RANKED',text})}else{await navigator.clipboard.writeText(text);document.getElementById('shareRoom').textContent='SHARE TEXT COPIED ✓'}}catch{}};
+
   return;
  }
  let html='<div class="card">';
